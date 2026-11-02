@@ -65,6 +65,23 @@
                 );
         }
 
+        .exitHint {
+            position: absolute;
+            top: 505px;
+            z-index: 5;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: rgba(5, 9, 20, 0.62);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            pointer-events: none;
+            animation: exitPulse 1.6s ease-in-out infinite;
+        }
+        .exitHint.left { left: 8px; }
+        .exitHint.right { right: 8px; }
+        @keyframes exitPulse { 50% { opacity: .45; } }
+
         .player {
             position: absolute;
             left: 0;
@@ -348,7 +365,7 @@
         <span><kbd>Enter</kbd> chat</span>
     </div>
     <div id="topRight">
-        <div id="online" class="panel">1 online</div>
+        <div id="online" class="panel">1 here</div>
         <button id="muteBtn" class="panel" type="button">🔊 Sound on</button>
     </div>
 </div>
@@ -402,7 +419,7 @@ const CONFIG = {
 
     SEND_MS: 66,
     MUSIC_URL: 'https://www.image2url.com/r2/default/audio/1793599923817-73f7b374-67a7-4c6c-9711-a8257c610173.mp3',
-    RAIN_URL: '',   // rain sound removed (was: https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3)
+    RAIN_URL: 'https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3',
     MUSIC_VOL: 0.20,
     RAIN_VOL: 0.18,
     SFX_VOL: 0.25,
@@ -418,18 +435,23 @@ const ROOM_IMAGES = {
     restroom: 'https://i.postimg.cc/fLC4TTJL/Restrooms.jpg'
 };
 
-// Rain is turned off. To bring it back, list rooms here, e.g. ['exterior', 'stairway'].
-const RAIN_ROOMS = [];
+// Rain (picture overlay + sound) happens ONLY in these rooms.
+const RAIN_ROOMS = ['exterior', 'stairway'];
 const isRainRoom = (id) => RAIN_ROOMS.includes(id);
 
 const ROOM_ORDER = ['exterior', 'stairway', 'disco', 'dining', 'restroom'];
-const ROOM_X = {
-    exterior: [0, 300],
-    stairway: [300, 480],
-    disco: [480, 640],
-    dining: [640, 820],
-    restroom: [820, 1000]
+// Walk to the far left or right edge of a room to go through its exit.
+// To change where an exit leads, edit this list. side: 'left' or 'right'.
+const EXITS = {
+    exterior: [{ side: 'right', to: 'stairway' }],
+    stairway: [{ side: 'left', to: 'exterior' }, { side: 'right', to: 'disco' }],
+    disco:    [{ side: 'left', to: 'stairway' }, { side: 'right', to: 'dining' }],
+    dining:   [{ side: 'left', to: 'disco' },    { side: 'right', to: 'restroom' }],
+    restroom: [{ side: 'left', to: 'dining' }]
 };
+const ROOM_NAMES = { exterior: 'Outside', stairway: 'Stairway', disco: 'Disco', dining: 'Dining area', restroom: 'Restrooms' };
+const EXIT_X = { left: 65, right: 935 };
+const ENTER_X = { left: 120, right: 880 };
 
 const ASSETS = {
     idle: 'assets/Idle_aligned.gif',
@@ -642,7 +664,7 @@ function removePlayer(id) {
     updateOnline();
 }
 
-function updateOnline() { onlineEl.textContent = players.size + ' online'; }
+function updateOnline() { onlineEl.textContent = players.size + (players.size === 1 ? ' here' : ' here'); }
 
 function applyAnim(p, a) {
     const prev = p.a;
@@ -776,15 +798,6 @@ function startEmote(name) {
     emoteEnd = performance.now() + EMOTE_MS[name];
 }
 
-function getRoomForX(x) {
-    const clamped = Math.min(999, Math.max(0, x));
-    for (const id of ROOM_ORDER) {
-        const [minX, maxX] = ROOM_X[id];
-        if (clamped >= minX && clamped < maxX) return id;
-    }
-    return 'restroom';
-}
-
 let currentRoomId = 'exterior';
 let weatherState = 'clear';
 let weatherTimer = 0;
@@ -792,6 +805,7 @@ let weatherTimer = 0;
 function setRoomBackground(roomId) {
     if (!ROOM_IMAGES[roomId]) return;
     const url = ROOM_IMAGES[roomId];
+    weatherState = isRainRoom(roomId) ? 'rain' : 'clear';
     world.style.backgroundImage = 'url("' + url + '")';
     world.style.filter = 'brightness(1)';
     if (isRainRoom(roomId)) {
@@ -834,20 +848,37 @@ const roomLabel = document.createElement('div');
 roomLabel.style.cssText = 'position:absolute;left:8px;bottom:8px;z-index:50;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.7);color:#fff;font:12px monospace;pointer-events:none;display:none';
 world.appendChild(roomLabel);
 
+function buildExitHints() {
+    world.querySelectorAll('.exitHint').forEach((e) => e.remove());
+    (EXITS[currentRoomId] || []).forEach((ex) => {
+        const d = document.createElement('div');
+        d.className = 'exitHint ' + ex.side;
+        d.textContent = ex.side === 'right' ? ROOM_NAMES[ex.to] + ' \u2192' : '\u2190 ' + ROOM_NAMES[ex.to];
+        world.appendChild(d);
+    });
+}
+
+function enterRoom(id, arriveSide) {
+    currentRoomId = id;
+    me.x = me.tx = ENTER_X[arriveSide];
+    for (const [pid, q] of [...players]) if (!q.isMe) removePlayer(pid);
+    setRoomBackground(id);
+    updateAudioForRoom();
+    buildExitHints();
+    lastSent.at = 0;
+}
+
 function updateRoomState() {
     if (!me) return;
-    const roomId = getRoomForX(me.x);
     if (location.hash === '#debug') {
         roomLabel.style.display = 'block';
-        roomLabel.textContent = 'room: ' + roomId + (isRainRoom(roomId) ? ' (rain)' : '') + '  x=' + Math.round(me.x);
+        roomLabel.textContent = 'v4 room: ' + currentRoomId + (isRainRoom(currentRoomId) ? ' (rain)' : '') + '  x=' + Math.round(me.x);
     } else roomLabel.style.display = 'none';
-    // Rain exists only in the exterior and the stairway, nowhere else
-    const want = isRainRoom(roomId) ? 'rain' : 'clear';
-    if (roomId !== currentRoomId || want !== weatherState) {
-        currentRoomId = roomId;
-        weatherState = want;
-        setRoomBackground(currentRoomId);
-        updateAudioForRoom();
+    for (const ex of EXITS[currentRoomId] || []) {
+        if ((ex.side === 'left' && me.x <= EXIT_X.left) || (ex.side === 'right' && me.x >= EXIT_X.right)) {
+            enterRoom(ex.to, ex.side === 'right' ? 'left' : 'right');
+            return;
+        }
     }
 }
 
@@ -997,6 +1028,10 @@ function onServer(m) {
             pendingName = null;
             nameInput.focus();
             break;
+        case 'roomchange':
+            for (const [pid, q] of [...players]) if (!q.isMe) removePlayer(pid);
+            m.players.forEach((info) => createPlayer(info, false));
+            break;
         case 'join':
             if (joined && !players.has(m.p.id)) {
                 createPlayer(m.p, false);
@@ -1034,7 +1069,7 @@ function sendState(now) {
     const changed = x !== lastSent.x || y !== lastSent.y || jy !== lastSent.jy || me.f !== lastSent.f || me.a !== lastSent.a;
     if (!changed && now - lastSent.at < 500) return;
     lastSent.x = x; lastSent.y = y; lastSent.jy = jy; lastSent.f = me.f; lastSent.a = me.a; lastSent.at = now;
-    ws.send(JSON.stringify({ t: 'state', x, y, jy, f: me.f, a: me.a }));
+    ws.send(JSON.stringify({ t: 'state', x, y, jy, f: me.f, a: me.a, r: currentRoomId }));
 }
 setInterval(() => sendState(performance.now()), CONFIG.SEND_MS);
 
@@ -1063,7 +1098,7 @@ joinCard.addEventListener('submit', (e) => {
 
 function startSolo(name) {
     soloMode = true;
-    me = createPlayer({ id: 'solo', name, x: 100, y: 540, jy: 0, f: 0, a: 'idle' }, true);
+    me = createPlayer({ id: 'solo', name, x: 500, y: 540, jy: 0, f: 0, a: 'idle' }, true);
     startGame();
     showBanner('The server is not reachable, so you are playing solo.');
     setRoomBackground(currentRoomId);
@@ -1077,9 +1112,10 @@ function startGame() {
     chatBox.hidden = false;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     window.focus();
-    currentRoomId = getRoomForX(me.x);
+    currentRoomId = 'exterior';
     setRoomBackground(currentRoomId);
     updateAudioForRoom();
+    buildExitHints();
 }
 
 let last = performance.now();
@@ -1111,3 +1147,4 @@ connect();
 </script>
 </body>
 </html>
+
