@@ -333,10 +333,7 @@
 </head>
 <body>
 
-<div id="world">
-    <div id="roomTint"></div>
-    <div id="rainTint"></div>
-</div>
+<div id="world"></div>
 
 <div id="hud" hidden>
     <div id="hint" class="panel">
@@ -394,58 +391,36 @@ const CONFIG = {
     GROUND_MAX_Y: 574,
     BACK_SCALE: 0.72,
 
-    SPRITE_H: 240,
+    SPRITE_H: 120,
     SPEED_X: 230,
     SPEED_Y: 110,
     JUMP_TIME: 0.7,
     JUMP_HEIGHT: 70,
 
     SEND_MS: 66,
-    MUSIC_URL: 'https://www.image2url.com/r2/default/audio/1793599923817-73f7b374-67a7-4c6c-9711-a8257c610173.mp3',
-    RAIN_URL: 'https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3',
-    MUSIC_VOL: 0.20,
-    RAIN_VOL: 0.18,
+    MUSIC_URL: 'audio.mp3',
+    MUSIC_VOL: 0.25,
     SFX_VOL: 0.25,
-    DANCE_MUSIC_VOL: 0.4,
-    WEATHER_SWITCH_MS: 18000
-};
-
-const ROOM_IMAGES = {
-    ironCafe: 'background.webp',
-    exterior: 'https://i.postimg.cc/0Qng22bj/Exterior.jpg',
-    stairway: 'https://i.postimg.cc/PxyGrrPt/Stairway.jpg',
-    disco: 'https://i.postimg.cc/DZ6Vyy8b/Disco-room.gif',
-    dining: 'https://i.postimg.cc/LXDd66nn/Dining-area.jpg',
-    restroom: 'https://i.postimg.cc/fLC4TTJL/Restrooms.jpg'
-};
-
-const ROOM_ORDER = ['ironCafe', 'exterior', 'stairway', 'disco', 'dining', 'restroom'];
-const ROOM_X = {
-    ironCafe: [0, 160],
-    exterior: [160, 300],
-    stairway: [300, 480],
-    disco: [480, 640],
-    dining: [640, 820],
-    restroom: [820, 1000]
+    DANCE_MUSIC_VOL: 0.4
 };
 
 const ASSETS = {
-    idle: 'assets/Idle_aligned.gif',
-    walk: 'https://i.postimg.cc/WFcdm91T/Walk.gif',
-    drink: 'assets/Drink_emote_aligned.gif',
+    idle:   'assets/Idle_aligned.gif',
+    walk:   'https://i.postimg.cc/WFcdm91T/Walk.gif',
+    drink:  'assets/Drink_emote_aligned.gif',
     burger: 'assets/Cheeseburger_emote_aligned.gif',
-    dance: 'assets/Monster_mash_dance_aligned.gif',
+    dance:  'assets/Monster_mash_dance_aligned.gif',
     jumpSheet: 'assets/Jump_sheet.png',
     jumpFrames: 10
 };
 
 const SOUNDS = {
-    munch: 'https://www.image2url.com/r2/default/audio/1793499241478-e7f57d12-d00a-43d3-8ab2-66434272d5a3.mp3',
-    cheeseburger: 'https://www.image2url.com/r2/default/audio/1793499104907-c222d6b9-0b13-4c34-8d57-dd0c34e5161b.mp3',
-    jump: 'https://www.image2url.com/r2/default/audio/1793499064199-6a79d910-5f71-4404-b08c-3cdaf4eaf640.mp3',
-    drink: 'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b3.mp3',
-    walk: 'https://www.image2url.com/r2/default/audio/1793499203708-68012539-3913-46b4-a77f-1ef34b5c565e.mp3',
-    dance: ''
+    munch:       'https://www.image2url.com/r2/default/audio/1793499241478-e7f57d12-d00a-43d3-8ab2-66434272d5a3.mp3',
+    cheeseburger:'https://www.image2url.com/r2/default/audio/1793499104907-c222d6b9-0b13-4c34-8d57-dd0c34e5161b.mp3',
+    jump:        'https://www.image2url.com/r2/default/audio/1793499064199-6a79d910-5f71-4404-b08c-3cdaf4eaf640.mp3',
+    drink:       'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b.mp3',
+    walk:        'https://www.image2url.com/r2/default/audio/1793499203708-68012539-3913-46b4-a77f-1ef34b5c565e.mp3',
+    dance:       'https://uploads.pastewaves.com/uploads/86a7c272-373a-400e-b47f-4d15ac7ef156/audio.mp3'
 };
 
 const EMOTE_MS = { drink: 1740, burger: 1590, dance: 14870 };
@@ -456,8 +431,6 @@ const joinEl = $('join'), joinCard = $('joinCard'), nameInput = $('nameInput');
 const joinBtn = $('joinBtn'), joinMsg = $('joinMsg'), serverStatus = $('serverStatus');
 const hud = $('hud'), chatBox = $('chat'), logEl = $('log'), chatForm = $('chatForm');
 const chatInput = $('chatInput'), banner = $('banner'), onlineEl = $('online'), muteBtn = $('muteBtn');
-const roomTint = world.querySelector('#roomTint');
-const rainTint = world.querySelector('#rainTint');
 
 const SPRITE_H = CONFIG.SPRITE_H;
 const SPRITE_W = SPRITE_H * 0.88;
@@ -479,12 +452,11 @@ addEventListener('resize', layout);
 layout();
 
 let muted = false;
-try { muted = localStorage.getItem('noobworld-muted') === '1'; } catch (e) { /* storage may be blocked */ }
-try { nameInput.value = localStorage.getItem('noobworld-name') || ''; } catch (e) { /* ignore */ }
+try { muted = localStorage.getItem('noobworld-muted') === '1'; } catch (e) { }
+try { nameInput.value = localStorage.getItem('noobworld-name') || ''; } catch (e) { }
 
 const sfx = {};
 Object.keys(SOUNDS).forEach((k) => {
-    if (!SOUNDS[k]) return;
     if (k === 'walk' || k === 'dance') return;
     const a = new Audio(SOUNDS[k]);
     a.preload = 'auto';
@@ -502,10 +474,6 @@ const bgMusic = new Audio(CONFIG.MUSIC_URL);
 bgMusic.loop = true;
 bgMusic.volume = CONFIG.MUSIC_VOL;
 
-const rainAudio = new Audio(CONFIG.RAIN_URL);
-rainAudio.loop = true;
-rainAudio.volume = CONFIG.RAIN_VOL;
-
 let danceAudio = null, danceOwner = null;
 
 function duckMusic(on) { bgMusic.volume = on ? CONFIG.MUSIC_VOL * 0.3 : CONFIG.MUSIC_VOL; }
@@ -517,7 +485,7 @@ function stopDanceMusic() {
 }
 
 function startDanceMusic(ownerId, isMe) {
-    if (muted || !SOUNDS.dance) return;
+    if (muted) return;
     if (danceAudio && !isMe) return;
     stopDanceMusic();
     danceOwner = ownerId;
@@ -545,14 +513,13 @@ function setFootsteps(on) {
 function setMuted(value) {
     muted = value;
     muteBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
-    try { localStorage.setItem('noobworld-muted', muted ? '1' : '0'); } catch (e) { /* ignore */ }
+    try { localStorage.setItem('noobworld-muted', muted ? '1' : '0'); } catch (e) { }
     if (muted) {
         bgMusic.pause();
-        rainAudio.pause();
         stopDanceMusic();
         setFootsteps(false);
     } else if (joined) {
-        updateAudioForRoom();
+        bgMusic.play().catch(() => {});
     }
 }
 muteBtn.addEventListener('click', () => { setMuted(!muted); muteBtn.blur(); });
@@ -561,7 +528,6 @@ muteBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
 const blobs = {};
 ['drink', 'burger', 'dance'].forEach((k) => {
     const url = ASSETS[k];
-    if (!url) return;
     fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject())).then((b) => { blobs[url] = b; }).catch(() => {});
 });
 
@@ -774,84 +740,6 @@ function startEmote(name) {
     emoteEnd = performance.now() + EMOTE_MS[name];
 }
 
-function getRoomForX(x) {
-    const clamped = Math.min(999, Math.max(0, x));
-    for (const id of ROOM_ORDER) {
-        const [minX, maxX] = ROOM_X[id];
-        if (clamped >= minX && clamped < maxX) return id;
-    }
-    return 'restroom';
-}
-
-let currentRoomId = 'ironCafe';
-let weatherState = 'clear';
-let weatherTimer = 0;
-
-function setRoomBackground(roomId) {
-    if (!ROOM_IMAGES[roomId]) return;
-    const url = ROOM_IMAGES[roomId];
-    world.style.backgroundImage = 'url("' + url + '")';
-    world.style.filter = 'brightness(1)';
-    if (roomId === 'exterior' || roomId === 'stairway') {
-        world.style.filter = weatherState === 'rain' ? 'brightness(0.8) saturate(0.9)' : 'brightness(1)';
-    }
-    roomTint.style.opacity = (roomId === 'exterior' || roomId === 'stairway') && weatherState === 'rain' ? '0.28' : '0';
-    rainTint.style.opacity = (roomId === 'exterior' || roomId === 'stairway') && weatherState === 'rain' ? '1' : '0';
-}
-
-function updateAudioForRoom() {
-    if (muted) {
-        bgMusic.pause();
-        rainAudio.pause();
-        return;
-    }
-
-    const roomId = currentRoomId;
-    const rainRooms = roomId === 'exterior' || roomId === 'stairway';
-    const musicRooms = roomId === 'disco' || roomId === 'dining' || roomId === 'restroom';
-
-    if (musicRooms) {
-        rainAudio.pause();
-        if (bgMusic.paused) bgMusic.play().catch(() => {});
-        bgMusic.volume = CONFIG.MUSIC_VOL;
-        return;
-    }
-
-    if (rainRooms && weatherState === 'rain') {
-        bgMusic.pause();
-        if (rainAudio.paused) rainAudio.play().catch(() => {});
-        rainAudio.volume = CONFIG.RAIN_VOL;
-        return;
-    }
-
-    bgMusic.pause();
-    rainAudio.pause();
-}
-
-function updateRoomState() {
-    if (!me) return;
-    const roomId = getRoomForX(me.x);
-    if (roomId !== currentRoomId) {
-        currentRoomId = roomId;
-        setRoomBackground(currentRoomId);
-        updateAudioForRoom();
-    }
-
-    if (currentRoomId === 'exterior' || currentRoomId === 'stairway') {
-        const now = performance.now();
-        if (now - weatherTimer > CONFIG.WEATHER_SWITCH_MS) {
-            weatherTimer = now;
-            weatherState = weatherState === 'clear' ? 'rain' : 'clear';
-            setRoomBackground(currentRoomId);
-            updateAudioForRoom();
-        }
-    } else if (weatherState !== 'clear') {
-        weatherState = 'clear';
-        setRoomBackground(currentRoomId);
-        updateAudioForRoom();
-    }
-}
-
 function updateMe(dt, now) {
     let dx = 0, dy = 0;
     if (!typing()) {
@@ -887,7 +775,6 @@ function updateMe(dt, now) {
     const a = jumping ? 'jump' : (emote || (moving ? 'walk' : 'idle'));
     if (a !== me.a) applyAnim(me, a);
     setFootsteps(a === 'walk');
-    updateRoomState();
 }
 
 let ws = null, wsReady = false, joined = false, soloMode = false, gaveUp = false;
@@ -1051,7 +938,7 @@ joinCard.addEventListener('submit', (e) => {
     }
     joinMsg.textContent = '';
     joinBtn.disabled = true;
-    try { localStorage.setItem('noobworld-name', name); } catch (err) { /* ignore */ }
+    try { localStorage.setItem('noobworld-name', name); } catch (err) { }
 
     if (!muted) bgMusic.play().catch(() => {});
 
@@ -1066,8 +953,6 @@ function startSolo(name) {
     me = createPlayer({ id: 'solo', name, x: 500, y: 540, jy: 0, f: 0, a: 'idle' }, true);
     startGame();
     showBanner('The server is not reachable, so you are playing solo.');
-    setRoomBackground(currentRoomId);
-    updateAudioForRoom();
 }
 
 function startGame() {
@@ -1077,9 +962,6 @@ function startGame() {
     chatBox.hidden = false;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     window.focus();
-    currentRoomId = getRoomForX(me.x);
-    setRoomBackground(currentRoomId);
-    updateAudioForRoom();
 }
 
 let last = performance.now();
@@ -1098,14 +980,11 @@ function frame(now) {
             p.jy += (p.tjy - p.jy) * k;
             renderPlayer(p, now);
         });
+        renderPlayer(me, now);
     }
-
     requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-
-setRoomBackground(currentRoomId);
-updateAudioForRoom();
 })();
 </script>
 </body>
