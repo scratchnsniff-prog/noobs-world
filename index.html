@@ -1,315 +1,342 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Iron Café</title>
-<style>
-    :root {
-        --night: #050914;
-        --panel: rgba(7, 11, 28, 0.82);
-        --neon: #d9ec1a;
-        --neon-soft: rgba(217, 236, 26, 0.38);
-        --red: #ff3350;
-        --ink: #e8eeff;
-        --muted: #8e9ac4;
-        --sw: 105.6px;   /* sprite width  (set from CONFIG in the script) */
-        --sh: 120px;     /* sprite height */
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Iron Café</title>
+    <style>
+        :root {
+            --night: #050914;
+            --panel: rgba(7, 11, 28, 0.82);
+            --neon: #d9ec1a;
+            --neon-soft: rgba(217, 236, 26, 0.38);
+            --red: #ff3350;
+            --ink: #e8eeff;
+            --muted: #8e9ac4;
+            --sw: 211.2px;
+            --sh: 240px;
+        }
 
-    * { box-sizing: border-box; }
+        * { box-sizing: border-box; }
 
-    html, body {
-        margin: 0;
-        height: 100%;
-        overflow: hidden;
-        background: var(--night);
-        color: var(--ink);
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: var(--night);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
 
-    /* ---------- The world ---------- */
-    #world {
-        position: absolute;
-        width: 1000px;
-        height: 588px;
-        transform-origin: 0 0;
-        overflow: hidden;
-        background: #0a1230 url("background.webp") center / 100% 100% no-repeat;
-    }
+        #world {
+            position: absolute;
+            width: 1000px;
+            height: 588px;
+            transform-origin: 0 0;
+            overflow: hidden;
+            background-color: #0a1230;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            transition: filter 0.25s ease;
+        }
 
-    .player {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 0;
-        height: 0;
-    }
+        #roomTint, #rainTint {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
 
-    .sprite {
-        position: absolute;
-        left: calc(var(--sw) / -2);
-        top: calc(var(--sh) * -1);
-        width: var(--sw);
-        height: var(--sh);
-        background-repeat: no-repeat;
-        background-position: center bottom;
-        background-size: contain;
-        transform-origin: 50% 100%;
-    }
+        #roomTint {
+            background: rgba(7, 12, 24, 0.10);
+        }
 
-    .over {
-        position: absolute;
-        left: 0;
-        top: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 3px;
-        width: max-content;
-        max-width: 190px;
-        pointer-events: none;
-    }
+        #rainTint {
+            background:
+                linear-gradient(rgba(128, 149, 184, 0.14), rgba(128, 149, 184, 0.14)),
+                repeating-linear-gradient(
+                    to bottom,
+                    rgba(180, 210, 255, 0.12) 0,
+                    rgba(180, 210, 255, 0.12) 2px,
+                    rgba(0, 0, 0, 0) 2px,
+                    rgba(0, 0, 0, 0) 9px
+                );
+        }
 
-    .tag {
-        padding: 1px 8px;
-        border-radius: 999px;
-        background: rgba(5, 9, 20, 0.72);
-        color: var(--ink);
-        font-size: 12px;
-        font-weight: 600;
-        line-height: 1.5;
-        white-space: nowrap;
-    }
-    .tag.me { color: var(--neon); }
+        .player {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 0;
+        }
 
-    .bubble {
-        display: none;
-        position: relative;
-        padding: 4px 9px;
-        border-radius: 10px;
-        background: #f4f7ff;
-        color: #101830;
-        font-size: 13px;
-        line-height: 1.25;
-        text-align: center;
-        overflow-wrap: anywhere;
-    }
-    .bubble.show { display: block; }
-    .bubble::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        bottom: -5px;
-        margin-left: -5px;
-        border: 5px solid transparent;
-        border-top-color: #f4f7ff;
-        border-bottom: 0;
-    }
+        .sprite {
+            position: absolute;
+            left: calc(var(--sw) / -2);
+            top: calc(var(--sh) * -1);
+            width: var(--sw);
+            height: var(--sh);
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            background-size: contain;
+            transform-origin: 50% 100%;
+        }
 
-    /* ---------- Shared panel look ---------- */
-    .panel {
-        background: var(--panel);
-        border: 1px solid var(--neon-soft);
-        border-radius: 10px;
-        backdrop-filter: blur(4px);
-    }
+        .over {
+            position: absolute;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            width: max-content;
+            max-width: 190px;
+            pointer-events: none;
+        }
 
-    kbd {
-        display: inline-block;
-        min-width: 22px;
-        padding: 1px 6px;
-        border: 1px solid #39427a;
-        border-bottom-width: 2px;
-        border-radius: 5px;
-        background: #151b3d;
-        color: var(--ink);
-        font: 600 12px/1.5 system-ui, sans-serif;
-        text-align: center;
-    }
+        .tag {
+            padding: 1px 8px;
+            border-radius: 999px;
+            background: rgba(5, 9, 20, 0.72);
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.5;
+            white-space: nowrap;
+        }
+        .tag.me { color: var(--neon); }
 
-    /* ---------- In-game overlay ---------- */
-    #hud[hidden], #chat[hidden], #banner[hidden], #join[hidden] { display: none; }
+        .bubble {
+            display: none;
+            position: relative;
+            padding: 4px 9px;
+            border-radius: 10px;
+            background: #f4f7ff;
+            color: #101830;
+            font-size: 13px;
+            line-height: 1.25;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+        .bubble.show { display: block; }
+        .bubble::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -5px;
+            margin-left: -5px;
+            border: 5px solid transparent;
+            border-top-color: #f4f7ff;
+            border-bottom: 0;
+        }
 
-    #hint {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        padding: 7px 10px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 12px;
-        font-size: 12px;
-        color: var(--muted);
-    }
-    #hint span { white-space: nowrap; }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--neon-soft);
+            border-radius: 10px;
+            backdrop-filter: blur(4px);
+        }
 
-    #topRight {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    #online, #muteBtn {
-        padding: 7px 12px;
-        font-size: 13px;
-        color: var(--ink);
-    }
-    #muteBtn { cursor: pointer; font-family: inherit; }
-    #muteBtn:hover { border-color: var(--neon); }
+        kbd {
+            display: inline-block;
+            min-width: 22px;
+            padding: 1px 6px;
+            border: 1px solid #39427a;
+            border-bottom-width: 2px;
+            border-radius: 5px;
+            background: #151b3d;
+            color: var(--ink);
+            font: 600 12px/1.5 system-ui, sans-serif;
+            text-align: center;
+        }
 
-    #chat {
-        position: fixed;
-        left: 10px;
-        top: 58px;                 /* up in the sky so it never covers the walkable ground */
-        width: min(380px, calc(100vw - 20px));
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-    #log {
-        max-height: 150px;
-        overflow-y: auto;
-        padding: 6px 10px;
-        font-size: 13px;
-        line-height: 1.45;
-        overflow-wrap: anywhere;
-    }
-    #log:empty { display: none; }
-    #log b { color: var(--neon); font-weight: 600; margin-right: 6px; }
-    #log .sys { color: var(--muted); font-style: italic; }
-    #chatInput {
-        width: 100%;
-        padding: 9px 12px;
-        font: inherit;
-        font-size: 14px;
-        color: var(--ink);
-        background: var(--panel);
-        border: 1px solid var(--neon-soft);
-        border-radius: 10px;
-    }
-    #chatInput::placeholder { color: var(--muted); }
+        #hud[hidden], #chat[hidden], #banner[hidden], #join[hidden] { display: none; }
 
-    #banner {
-        position: fixed;
-        left: 50%;
-        top: 56px;
-        transform: translateX(-50%);
-        padding: 8px 14px;
-        font-size: 13px;
-        max-width: calc(100vw - 24px);
-        text-align: center;
-    }
+        #hint {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 7px 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        #hint span { white-space: nowrap; }
 
-    /* ---------- Join screen ---------- */
-    #join {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        background: radial-gradient(ellipse at 50% 45%, rgba(5, 9, 20, 0.55), rgba(5, 9, 20, 0.92));
-    }
-    #joinCard {
-        width: min(100%, 390px);
-        padding: 26px 26px 22px;
-        border-radius: 14px;
-        box-shadow: 0 0 34px rgba(217, 236, 26, 0.16);
-    }
-    #joinCard h1 {
-        margin: 0 0 20px;
-        text-align: center;
-        font-family: Georgia, "Times New Roman", serif;
-        font-style: italic;
-        font-weight: 700;
-        line-height: 1.05;
-    }
-    #joinCard .iron {
-        display: block;
-        font-size: 46px;
-        color: var(--neon);
-        text-shadow: 0 0 6px rgba(217, 236, 26, 0.85), 0 0 22px rgba(217, 236, 26, 0.45);
-    }
-    #joinCard .cafe {
-        display: block;
-        margin-top: 2px;
-        font-size: 24px;
-        color: var(--red);
-        text-shadow: 0 0 6px rgba(255, 51, 80, 0.85), 0 0 18px rgba(255, 51, 80, 0.4);
-    }
-    #joinCard label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 14px;
-        font-weight: 600;
-    }
-    #nameInput {
-        width: 100%;
-        padding: 11px 12px;
-        font: inherit;
-        font-size: 16px;
-        color: var(--ink);
-        background: #0c1230;
-        border: 1px solid #39427a;
-        border-radius: 8px;
-    }
-    #nameInput:focus-visible,
-    #chatInput:focus-visible,
-    #joinBtn:focus-visible,
-    #muteBtn:focus-visible {
-        outline: 2px solid var(--neon);
-        outline-offset: 2px;
-    }
-    #joinBtn {
-        width: 100%;
-        margin-top: 12px;
-        padding: 12px;
-        font: inherit;
-        font-size: 16px;
-        font-weight: 700;
-        color: #141a00;
-        background: var(--neon);
-        border: 0;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-    #joinBtn:disabled { opacity: 0.55; cursor: default; }
-    #joinMsg {
-        min-height: 20px;
-        margin: 10px 0 0;
-        font-size: 13px;
-        color: #ffb3bf;
-    }
-    #serverStatus {
-        margin: 2px 0 0;
-        font-size: 12px;
-        color: var(--muted);
-    }
-    #keys {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 6px 10px;
-        align-items: center;
-        margin: 16px 0 0;
-        padding-top: 14px;
-        border-top: 1px solid rgba(142, 154, 196, 0.25);
-        font-size: 13px;
-        color: var(--muted);
-    }
-    #keys dt { margin: 0; }
-    #keys dd { margin: 0; }
+        #topRight {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        #online, #muteBtn {
+            padding: 7px 12px;
+            font-size: 13px;
+            color: var(--ink);
+        }
+        #muteBtn { cursor: pointer; font-family: inherit; }
+        #muteBtn:hover { border-color: var(--neon); }
 
-    @media (prefers-reduced-motion: reduce) {
-        * { transition: none !important; animation: none !important; }
-    }
-</style>
+        #chat {
+            position: fixed;
+            left: 10px;
+            top: 58px;
+            width: min(380px, calc(100vw - 20px));
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        #log {
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 6px 10px;
+            font-size: 13px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+        #log:empty { display: none; }
+        #log b { color: var(--neon); font-weight: 600; margin-right: 6px; }
+        #log .sys { color: var(--muted); font-style: italic; }
+        #chatInput {
+            width: 100%;
+            padding: 9px 12px;
+            font: inherit;
+            font-size: 14px;
+            color: var(--ink);
+            background: var(--panel);
+            border: 1px solid var(--neon-soft);
+            border-radius: 10px;
+        }
+        #chatInput::placeholder { color: var(--muted); }
+
+        #banner {
+            position: fixed;
+            left: 50%;
+            top: 56px;
+            transform: translateX(-50%);
+            padding: 8px 14px;
+            font-size: 13px;
+            max-width: calc(100vw - 24px);
+            text-align: center;
+        }
+
+        #join {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: radial-gradient(ellipse at 50% 45%, rgba(5, 9, 20, 0.55), rgba(5, 9, 20, 0.92));
+        }
+        #joinCard {
+            width: min(100%, 390px);
+            padding: 26px 26px 22px;
+            border-radius: 14px;
+            box-shadow: 0 0 34px rgba(217, 236, 26, 0.16);
+        }
+        #joinCard h1 {
+            margin: 0 0 20px;
+            text-align: center;
+            font-family: Georgia, "Times New Roman", serif;
+            font-style: italic;
+            font-weight: 700;
+            line-height: 1.05;
+        }
+        #joinCard .iron {
+            display: block;
+            font-size: 46px;
+            color: var(--neon);
+            text-shadow: 0 0 6px rgba(217, 236, 26, 0.85), 0 0 22px rgba(217, 236, 26, 0.45);
+        }
+        #joinCard .cafe {
+            display: block;
+            margin-top: 2px;
+            font-size: 24px;
+            color: var(--red);
+            text-shadow: 0 0 6px rgba(255, 51, 80, 0.85), 0 0 18px rgba(255, 51, 80, 0.4);
+        }
+        #joinCard label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        #nameInput {
+            width: 100%;
+            padding: 11px 12px;
+            font: inherit;
+            font-size: 16px;
+            color: var(--ink);
+            background: #0c1230;
+            border: 1px solid #39427a;
+            border-radius: 8px;
+        }
+        #nameInput:focus-visible,
+        #chatInput:focus-visible,
+        #joinBtn:focus-visible,
+        #muteBtn:focus-visible {
+            outline: 2px solid var(--neon);
+            outline-offset: 2px;
+        }
+        #joinBtn {
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            color: #141a00;
+            background: var(--neon);
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #joinBtn:disabled { opacity: 0.55; cursor: default; }
+        #joinMsg {
+            min-height: 20px;
+            margin: 10px 0 0;
+            font-size: 13px;
+            color: #ffb3bf;
+        }
+        #serverStatus {
+            margin: 2px 0 0;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        #keys {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 6px 10px;
+            align-items: center;
+            margin: 16px 0 0;
+            padding-top: 14px;
+            border-top: 1px solid rgba(142, 154, 196, 0.25);
+            font-size: 13px;
+            color: var(--muted);
+        }
+        #keys dt { margin: 0; }
+        #keys dd { margin: 0; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+    </style>
 </head>
 <body>
 
-<div id="world"></div>
+<div id="world">
+    <div id="roomTint"></div>
+    <div id="rainTint"></div>
+</div>
 
 <div id="hud" hidden>
     <div id="hint" class="panel">
@@ -358,73 +385,85 @@
 (() => {
 'use strict';
 
-/* =====================================================================
-   SETTINGS: the things you will most likely want to change
-   ===================================================================== */
 const CONFIG = {
-    // Leave empty when the server also serves this page (the normal setup).
-    // If this page lives somewhere else, put your server here, e.g. 'wss://your-game.onrender.com/ws'
     SERVER_URL: '',
-    CONNECT_TIMEOUT_MS: 45000,      // how long to wait for a sleeping server before playing solo
+    CONNECT_TIMEOUT_MS: 45000,
 
-    WORLD_W: 1000, WORLD_H: 588,    // size of background.webp
-    GROUND_MIN_Y: 478,              // farthest back a player can walk (the building wall)
-    GROUND_MAX_Y: 574,              // closest to the screen
-    BACK_SCALE: 0.72,               // how small players get at the far end of the ground
+    WORLD_W: 1000, WORLD_H: 588,
+    GROUND_MIN_Y: 478,
+    GROUND_MAX_Y: 574,
+    BACK_SCALE: 0.72,
 
-    SPRITE_H: 120,                  // height of a player at the front
-    SPEED_X: 230,                   // walking speed, left and right
-    SPEED_Y: 110,                   // walking speed, toward and away
-    JUMP_TIME: 0.7,                 // seconds in the air
-    JUMP_HEIGHT: 70,                // how high a jump goes
+    SPRITE_H: 240,
+    SPEED_X: 230,
+    SPEED_Y: 110,
+    JUMP_TIME: 0.7,
+    JUMP_HEIGHT: 70,
 
-    SEND_MS: 66,                    // how often your position is sent
-    MUSIC_URL: 'audio.mp3',         // background music: replace public/audio.mp3 with your own file
-    MUSIC_VOL: 0.25,
+    SEND_MS: 66,
+    MUSIC_URL: 'https://www.image2url.com/r2/default/audio/1793599923817-73f7b374-67a7-4c6c-9711-a8257c610173.mp3',
+    RAIN_URL: 'https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3',
+    MUSIC_VOL: 0.20,
+    RAIN_VOL: 0.18,
     SFX_VOL: 0.25,
-    DANCE_MUSIC_VOL: 0.4
+    DANCE_MUSIC_VOL: 0.4,
+    WEATHER_SWITCH_MS: 18000
 };
 
-// Pictures. Files in /assets are already lined up with each other.
+const ROOM_IMAGES = {
+    ironCafe: 'background.webp',
+    exterior: 'https://i.postimg.cc/0Qng22bj/Exterior.jpg',
+    stairway: 'https://i.postimg.cc/PxyGrrPt/Stairway.jpg',
+    disco: 'https://i.postimg.cc/DZ6Vyy8b/Disco-room.gif',
+    dining: 'https://i.postimg.cc/LXDd66nn/Dining-area.jpg',
+    restroom: 'https://i.postimg.cc/fLC4TTJL/Restrooms.jpg'
+};
+
+const ROOM_ORDER = ['ironCafe', 'exterior', 'stairway', 'disco', 'dining', 'restroom'];
+const ROOM_X = {
+    ironCafe: [0, 160],
+    exterior: [160, 300],
+    stairway: [300, 480],
+    disco: [480, 640],
+    dining: [640, 820],
+    restroom: [820, 1000]
+};
+
 const ASSETS = {
-    idle:   'assets/Idle_aligned.gif',
-    // Walk is still the original upload. Swap in an aligned file once you have one.
-    walk:   'https://i.postimg.cc/WFcdm91T/Walk.gif',
-    drink:  'assets/Drink_emote_aligned.gif',
+    idle: 'assets/Idle_aligned.gif',
+    walk: 'https://i.postimg.cc/WFcdm91T/Walk.gif',
+    drink: 'assets/Drink_emote_aligned.gif',
     burger: 'assets/Cheeseburger_emote_aligned.gif',
-    dance:  'assets/Monster_mash_dance_aligned.gif',
-    jumpSheet: 'assets/Jump_sheet.png',   // 10 jump frames in a row
+    dance: 'assets/Monster_mash_dance_aligned.gif',
+    jumpSheet: 'assets/Jump_sheet.png',
     jumpFrames: 10
 };
 
-// Sounds
 const SOUNDS = {
-    munch:       'https://www.image2url.com/r2/default/audio/1793499241478-e7f57d12-d00a-43d3-8ab2-66434272d5a3.mp3',
-    cheeseburger:'https://www.image2url.com/r2/default/audio/1793499104907-c222d6b9-0b13-4c34-8d57-dd0c34e5161b.mp3',
-    jump:        'https://www.image2url.com/r2/default/audio/1793499064199-6a79d910-5f71-4404-b08c-3cdaf4eaf640.mp3',
-    drink:       'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b.mp3',
-    walk:        'https://www.image2url.com/r2/default/audio/1793499203708-68012539-3913-46b4-a77f-1ef34b5c565e.mp3',
-    dance:       'https://uploads.pastewaves.com/uploads/86a7c272-373a-400e-b47f-4d15ac7ef156/audio.mp3'
+    munch: 'https://www.image2url.com/r2/default/audio/1793499241478-e7f57d12-d00a-43d3-8ab2-66434272d5a3.mp3',
+    cheeseburger: 'https://www.image2url.com/r2/default/audio/1793499104907-c222d6b9-0b13-4c34-8d57-dd0c34e5161b.mp3',
+    jump: 'https://www.image2url.com/r2/default/audio/1793499064199-6a79d910-5f71-4404-b08c-3cdaf4eaf640.mp3',
+    drink: 'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b3.mp3',
+    walk: 'https://www.image2url.com/r2/default/audio/1793499203708-68012539-3913-46b4-a77f-1ef34b5c565e.mp3',
+    dance: ''
 };
 
-// How long each emote lasts (matches the GIF lengths)
 const EMOTE_MS = { drink: 1740, burger: 1590, dance: 14870 };
 
-/* =====================================================================
-   Setup
-   ===================================================================== */
 const $ = (id) => document.getElementById(id);
 const world = $('world');
 const joinEl = $('join'), joinCard = $('joinCard'), nameInput = $('nameInput');
 const joinBtn = $('joinBtn'), joinMsg = $('joinMsg'), serverStatus = $('serverStatus');
 const hud = $('hud'), chatBox = $('chat'), logEl = $('log'), chatForm = $('chatForm');
 const chatInput = $('chatInput'), banner = $('banner'), onlineEl = $('online'), muteBtn = $('muteBtn');
+const roomTint = world.querySelector('#roomTint');
+const rainTint = world.querySelector('#rainTint');
 
 const SPRITE_H = CONFIG.SPRITE_H;
-const SPRITE_W = SPRITE_H * 0.88;                  // the pictures are 880 x 1000
-const CHAR_H = SPRITE_H * 0.896;                   // the character is 89.6% of the picture height
-const FEET_PAD = SPRITE_H * 0.04;                  // empty space under the feet in each picture
-const DANCE_SCALE = 1.28 * SPRITE_H / SPRITE_W;    // the dance picture has a wider canvas, so it is scaled up to match
+const SPRITE_W = SPRITE_H * 0.88;
+const CHAR_H = SPRITE_H * 0.896;
+const FEET_PAD = SPRITE_H * 0.04;
+const DANCE_SCALE = 1.28 * SPRITE_H / SPRITE_W;
 const JUMP_FRAMES = ASSETS.jumpFrames;
 
 document.documentElement.style.setProperty('--sw', SPRITE_W + 'px');
@@ -443,11 +482,9 @@ let muted = false;
 try { muted = localStorage.getItem('noobworld-muted') === '1'; } catch (e) { /* storage may be blocked */ }
 try { nameInput.value = localStorage.getItem('noobworld-name') || ''; } catch (e) { /* ignore */ }
 
-/* =====================================================================
-   Sound
-   ===================================================================== */
 const sfx = {};
 Object.keys(SOUNDS).forEach((k) => {
+    if (!SOUNDS[k]) return;
     if (k === 'walk' || k === 'dance') return;
     const a = new Audio(SOUNDS[k]);
     a.preload = 'auto';
@@ -465,6 +502,10 @@ const bgMusic = new Audio(CONFIG.MUSIC_URL);
 bgMusic.loop = true;
 bgMusic.volume = CONFIG.MUSIC_VOL;
 
+const rainAudio = new Audio(CONFIG.RAIN_URL);
+rainAudio.loop = true;
+rainAudio.volume = CONFIG.RAIN_VOL;
+
 let danceAudio = null, danceOwner = null;
 
 function duckMusic(on) { bgMusic.volume = on ? CONFIG.MUSIC_VOL * 0.3 : CONFIG.MUSIC_VOL; }
@@ -476,8 +517,7 @@ function stopDanceMusic() {
 }
 
 function startDanceMusic(ownerId, isMe) {
-    if (muted) return;
-    // If someone else's music is playing, only take over when it is my own dance
+    if (muted || !SOUNDS.dance) return;
     if (danceAudio && !isMe) return;
     stopDanceMusic();
     danceOwner = ownerId;
@@ -508,26 +548,23 @@ function setMuted(value) {
     try { localStorage.setItem('noobworld-muted', muted ? '1' : '0'); } catch (e) { /* ignore */ }
     if (muted) {
         bgMusic.pause();
+        rainAudio.pause();
         stopDanceMusic();
         setFootsteps(false);
     } else if (joined) {
-        bgMusic.play().catch(() => {});
+        updateAudioForRoom();
     }
 }
 muteBtn.addEventListener('click', () => { setMuted(!muted); muteBtn.blur(); });
 muteBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
 
-/* =====================================================================
-   Pictures
-   ===================================================================== */
-// Keep copies of the emote pictures in memory so each emote starts from its first frame instantly
 const blobs = {};
 ['drink', 'burger', 'dance'].forEach((k) => {
     const url = ASSETS[k];
+    if (!url) return;
     fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject())).then((b) => { blobs[url] = b; }).catch(() => {});
 });
 
-// Preload the rest, and fall back to the idle picture if the walk picture cannot load
 ['idle', 'jumpSheet'].forEach((k) => { new Image().src = ASSETS[k]; });
 const walkTest = new Image();
 walkTest.onerror = () => { ASSETS.walk = ASSETS.idle; };
@@ -554,9 +591,6 @@ function showJumpSheet(p) {
     p.sprite.style.backgroundPosition = '0% 0';
 }
 
-/* =====================================================================
-   Players
-   ===================================================================== */
 const players = new Map();
 let me = null;
 
@@ -661,9 +695,6 @@ function showBubble(p, text) {
     p.bubbleTimer = setTimeout(() => p.bubble.classList.remove('show'), 5500);
 }
 
-/* =====================================================================
-   Chat log
-   ===================================================================== */
 function addLog(name, text, system) {
     const row = document.createElement('div');
     if (system) {
@@ -684,9 +715,6 @@ function showBanner(text) {
     banner.hidden = false;
 }
 
-/* =====================================================================
-   Input
-   ===================================================================== */
 const keys = new Set();
 const EMOTE_KEYS = { Digit1: 'drink', Numpad1: 'drink', Digit2: 'burger', Numpad2: 'burger', Digit3: 'dance', Numpad3: 'dance' };
 
@@ -730,9 +758,6 @@ chatForm.addEventListener('submit', (e) => {
     }
 });
 
-/* =====================================================================
-   Your own character
-   ===================================================================== */
 let jumping = false, jumpT = 0;
 let emote = null, emoteEnd = 0;
 
@@ -749,6 +774,84 @@ function startEmote(name) {
     emoteEnd = performance.now() + EMOTE_MS[name];
 }
 
+function getRoomForX(x) {
+    const clamped = Math.min(999, Math.max(0, x));
+    for (const id of ROOM_ORDER) {
+        const [minX, maxX] = ROOM_X[id];
+        if (clamped >= minX && clamped < maxX) return id;
+    }
+    return 'restroom';
+}
+
+let currentRoomId = 'ironCafe';
+let weatherState = 'clear';
+let weatherTimer = 0;
+
+function setRoomBackground(roomId) {
+    if (!ROOM_IMAGES[roomId]) return;
+    const url = ROOM_IMAGES[roomId];
+    world.style.backgroundImage = 'url("' + url + '")';
+    world.style.filter = 'brightness(1)';
+    if (roomId === 'exterior' || roomId === 'stairway') {
+        world.style.filter = weatherState === 'rain' ? 'brightness(0.8) saturate(0.9)' : 'brightness(1)';
+    }
+    roomTint.style.opacity = (roomId === 'exterior' || roomId === 'stairway') && weatherState === 'rain' ? '0.28' : '0';
+    rainTint.style.opacity = (roomId === 'exterior' || roomId === 'stairway') && weatherState === 'rain' ? '1' : '0';
+}
+
+function updateAudioForRoom() {
+    if (muted) {
+        bgMusic.pause();
+        rainAudio.pause();
+        return;
+    }
+
+    const roomId = currentRoomId;
+    const rainRooms = roomId === 'exterior' || roomId === 'stairway';
+    const musicRooms = roomId === 'disco' || roomId === 'dining' || roomId === 'restroom';
+
+    if (musicRooms) {
+        rainAudio.pause();
+        if (bgMusic.paused) bgMusic.play().catch(() => {});
+        bgMusic.volume = CONFIG.MUSIC_VOL;
+        return;
+    }
+
+    if (rainRooms && weatherState === 'rain') {
+        bgMusic.pause();
+        if (rainAudio.paused) rainAudio.play().catch(() => {});
+        rainAudio.volume = CONFIG.RAIN_VOL;
+        return;
+    }
+
+    bgMusic.pause();
+    rainAudio.pause();
+}
+
+function updateRoomState() {
+    if (!me) return;
+    const roomId = getRoomForX(me.x);
+    if (roomId !== currentRoomId) {
+        currentRoomId = roomId;
+        setRoomBackground(currentRoomId);
+        updateAudioForRoom();
+    }
+
+    if (currentRoomId === 'exterior' || currentRoomId === 'stairway') {
+        const now = performance.now();
+        if (now - weatherTimer > CONFIG.WEATHER_SWITCH_MS) {
+            weatherTimer = now;
+            weatherState = weatherState === 'clear' ? 'rain' : 'clear';
+            setRoomBackground(currentRoomId);
+            updateAudioForRoom();
+        }
+    } else if (weatherState !== 'clear') {
+        weatherState = 'clear';
+        setRoomBackground(currentRoomId);
+        updateAudioForRoom();
+    }
+}
+
 function updateMe(dt, now) {
     let dx = 0, dy = 0;
     if (!typing()) {
@@ -757,7 +860,7 @@ function updateMe(dt, now) {
     }
     const moving = dx !== 0 || dy !== 0;
 
-    if (moving) emote = null;                      // walking cancels an emote
+    if (moving) emote = null;
     if (emote && now >= emoteEnd) emote = null;
 
     if (moving) {
@@ -784,11 +887,9 @@ function updateMe(dt, now) {
     const a = jumping ? 'jump' : (emote || (moving ? 'walk' : 'idle'));
     if (a !== me.a) applyAnim(me, a);
     setFootsteps(a === 'walk');
+    updateRoomState();
 }
 
-/* =====================================================================
-   Network
-   ===================================================================== */
 let ws = null, wsReady = false, joined = false, soloMode = false, gaveUp = false;
 let pendingName = null;
 let reconnecting = false, reconnectStart = 0, lastPos = null;
@@ -833,7 +934,6 @@ function connect() {
     ws.onerror = () => {};
 }
 
-// Free hosts restart now and then, so try to get back in automatically
 function beginReconnect() {
     if (!me) return;
     if (!reconnecting) {
@@ -868,7 +968,6 @@ function onServer(m) {
     switch (m.t) {
         case 'welcome':
             if (reconnecting) {
-                // Start fresh with the new connection, but keep standing where you were
                 [...players.keys()].forEach(removePlayer);
                 jumping = false;
                 emote = null;
@@ -890,7 +989,6 @@ function onServer(m) {
             break;
         case 'error':
             if (reconnecting) {
-                // The server may still hold your old session for a few seconds. Try again shortly.
                 setTimeout(() => { if (wsReady && me) sendJoin(me.name); }, 2500);
                 break;
             }
@@ -940,9 +1038,6 @@ function sendState(now) {
 }
 setInterval(() => sendState(performance.now()), CONFIG.SEND_MS);
 
-/* =====================================================================
-   Joining
-   ===================================================================== */
 function cleanName(s) {
     return s.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 }
@@ -958,7 +1053,6 @@ joinCard.addEventListener('submit', (e) => {
     joinBtn.disabled = true;
     try { localStorage.setItem('noobworld-name', name); } catch (err) { /* ignore */ }
 
-    // Clicking Join counts as the click browsers need before they allow sound
     if (!muted) bgMusic.play().catch(() => {});
 
     pendingName = name;
@@ -972,6 +1066,8 @@ function startSolo(name) {
     me = createPlayer({ id: 'solo', name, x: 500, y: 540, jy: 0, f: 0, a: 'idle' }, true);
     startGame();
     showBanner('The server is not reachable, so you are playing solo.');
+    setRoomBackground(currentRoomId);
+    updateAudioForRoom();
 }
 
 function startGame() {
@@ -981,11 +1077,11 @@ function startGame() {
     chatBox.hidden = false;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     window.focus();
+    currentRoomId = getRoomForX(me.x);
+    setRoomBackground(currentRoomId);
+    updateAudioForRoom();
 }
 
-/* =====================================================================
-   Main loop
-   ===================================================================== */
 let last = performance.now();
 function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
@@ -999,16 +1095,17 @@ function frame(now) {
             if (Math.abs(p.tx - p.x) > 220 || Math.abs(p.ty - p.y) > 220) { p.x = p.tx; p.y = p.ty; }
             p.x += (p.tx - p.x) * k;
             p.y += (p.ty - p.y) * k;
-            p.jy += (p.tjy - p.jy) * Math.min(1, dt * 24);
+            p.jy += (p.tjy - p.jy) * k;
+            renderPlayer(p, now);
         });
-        players.forEach((p) => renderPlayer(p, now));
     }
+
     requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-connect();
-nameInput.focus();
+setRoomBackground(currentRoomId);
+updateAudioForRoom();
 })();
 </script>
 </body>
