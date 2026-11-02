@@ -402,7 +402,7 @@ const CONFIG = {
 
     SEND_MS: 66,
     MUSIC_URL: 'https://www.image2url.com/r2/default/audio/1793599923817-73f7b374-67a7-4c6c-9711-a8257c610173.mp3',
-    RAIN_URL: 'https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3',
+    RAIN_URL: '',   // rain sound removed (was: https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3)
     MUSIC_VOL: 0.20,
     RAIN_VOL: 0.18,
     SFX_VOL: 0.25,
@@ -411,7 +411,6 @@ const CONFIG = {
 };
 
 const ROOM_IMAGES = {
-    ironCafe: 'background.webp',
     exterior: 'https://i.postimg.cc/0Qng22bj/Exterior.jpg',
     stairway: 'https://i.postimg.cc/PxyGrrPt/Stairway.jpg',
     disco: 'https://i.postimg.cc/DZ6Vyy8b/Disco-room.gif',
@@ -419,14 +418,13 @@ const ROOM_IMAGES = {
     restroom: 'https://i.postimg.cc/fLC4TTJL/Restrooms.jpg'
 };
 
-// Rooms that get rain (picture overlay + rain sound). Edit this list to change where it rains.
-const RAIN_ROOMS = ['exterior', 'stairway'];
+// Rain is turned off. To bring it back, list rooms here, e.g. ['exterior', 'stairway'].
+const RAIN_ROOMS = [];
 const isRainRoom = (id) => RAIN_ROOMS.includes(id);
 
-const ROOM_ORDER = ['ironCafe', 'exterior', 'stairway', 'disco', 'dining', 'restroom'];
+const ROOM_ORDER = ['exterior', 'stairway', 'disco', 'dining', 'restroom'];
 const ROOM_X = {
-    ironCafe: [0, 160],
-    exterior: [160, 300],
+    exterior: [0, 300],
     stairway: [300, 480],
     disco: [480, 640],
     dining: [640, 820],
@@ -787,7 +785,7 @@ function getRoomForX(x) {
     return 'restroom';
 }
 
-let currentRoomId = 'ironCafe';
+let currentRoomId = 'exterior';
 let weatherState = 'clear';
 let weatherTimer = 0;
 
