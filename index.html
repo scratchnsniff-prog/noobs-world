@@ -831,22 +831,11 @@ function updateAudioForRoom() {
 function updateRoomState() {
     if (!me) return;
     const roomId = getRoomForX(me.x);
-    if (roomId !== currentRoomId) {
+    // Rain exists only in the exterior and the stairway, nowhere else
+    const want = (roomId === 'exterior' || roomId === 'stairway') ? 'rain' : 'clear';
+    if (roomId !== currentRoomId || want !== weatherState) {
         currentRoomId = roomId;
-        setRoomBackground(currentRoomId);
-        updateAudioForRoom();
-    }
-
-    if (currentRoomId === 'exterior' || currentRoomId === 'stairway') {
-        const now = performance.now();
-        if (now - weatherTimer > CONFIG.WEATHER_SWITCH_MS) {
-            weatherTimer = now;
-            weatherState = weatherState === 'clear' ? 'rain' : 'clear';
-            setRoomBackground(currentRoomId);
-            updateAudioForRoom();
-        }
-    } else if (weatherState !== 'clear') {
-        weatherState = 'clear';
+        weatherState = want;
         setRoomBackground(currentRoomId);
         updateAudioForRoom();
     }
@@ -888,6 +877,7 @@ function updateMe(dt, now) {
     if (a !== me.a) applyAnim(me, a);
     setFootsteps(a === 'walk');
     updateRoomState();
+    renderPlayer(me, now);
 }
 
 let ws = null, wsReady = false, joined = false, soloMode = false, gaveUp = false;
@@ -1063,7 +1053,7 @@ joinCard.addEventListener('submit', (e) => {
 
 function startSolo(name) {
     soloMode = true;
-    me = createPlayer({ id: 'solo', name, x: 500, y: 540, jy: 0, f: 0, a: 'idle' }, true);
+    me = createPlayer({ id: 'solo', name, x: 100, y: 540, jy: 0, f: 0, a: 'idle' }, true);
     startGame();
     showBanner('The server is not reachable, so you are playing solo.');
     setRoomBackground(currentRoomId);
