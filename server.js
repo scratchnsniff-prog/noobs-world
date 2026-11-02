@@ -145,10 +145,6 @@ function serveStatic(req, res) {
 }
 
 const server = http.createServer(serveStatic);
-server.on('error', (err) => {
-  console.error('Web server error:', err);
-  process.exitCode = 1;
-});
 
 // ---------- Minimal WebSocket (RFC 6455), no packages needed ----------
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -456,7 +452,7 @@ setInterval(() => {
   }
 }, 25000);
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log('Serving game files from: ' + PUBLIC_DIR);
   if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
     console.log('WARNING: index.html was not found. Files next to server.js: ' + fs.readdirSync(__dirname).join(', '));
