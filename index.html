@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Iron Café</title>
+<style>
+    :root {
+        --night: #050914;
+        --panel: rgba(7, 11, 28, 0.82);
+        --neon: #d9ec1a;
+        --neon-soft: rgba(217, 236, 26, 0.38);
+        --red: #ff3350;
+        --ink: #e8eeff;
+        --muted: #8e9ac4;
+        --sw: 105.6px;   /* sprite width  (set from CONFIG in the script) */
+        --sh: 120px;     /* sprite height */
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--night);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* ---------- The world ---------- */
+    #world {
+        position: absolute;
+        width: 1000px;
+        height: 588px;
+        transform-origin: 0 0;
+        overflow: hidden;
+        background: #0a1230 url("background.webp") center / 100% 100% no-repeat;
+    }
+
+    .player {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .sprite {
+        position: absolute;
+        left: calc(var(--sw) / -2);
+        top: calc(var(--sh) * -1);
+        width: var(--sw);
+        height: var(--sh);
+        background-repeat: no-repeat;
+        background-position: center bottom;
+        background-size: contain;
+        transform-origin: 50% 100%;
+    }
+
+    .over {
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        width: max-content;
+        max-width: 190px;
+        pointer-events: none;
+    }
+
+    .tag {
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: rgba(5, 9, 20, 0.72);
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.5;
+        white-space: nowrap;
+    }
+    .tag.me { color: var(--neon); }
+
+    .bubble {
+        display: none;
+        position: relative;
+        padding: 4px 9px;
+        border-radius: 10px;
+        background: #f4f7ff;
+        color: #101830;
+        font-size: 13px;
+        line-height: 1.25;
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+    .bubble.show { display: block; }
+    .bubble::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -5px;
+        margin-left: -5px;
+        border: 5px solid transparent;
+        border-top-color: #f4f7ff;
+        border-bottom: 0;
+    }
+
+    /* ---------- Shared panel look ---------- */
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--neon-soft);
+        border-radius: 10px;
+        backdrop-filter: blur(4px);
+    }
+
+    kbd {
+        display: inline-block;
+        min-width: 22px;
+        padding: 1px 6px;
+        border: 1px solid #39427a;
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: #151b3d;
+        color: var(--ink);
+        font: 600 12px/1.5 system-ui, sans-serif;
+        text-align: center;
+    }
+
+    /* ---------- In-game overlay ---------- */
+    #hud[hidden], #chat[hidden], #banner[hidden], #join[hidden] { display: none; }
+
+    #hint {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        padding: 7px 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        font-size: 12px;
+        color: var(--muted);
+    }
+    #hint span { white-space: nowrap; }
+
+    #topRight {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    #online, #muteBtn {
+        padding: 7px 12px;
+        font-size: 13px;
+        color: var(--ink);
+    }
+    #muteBtn { cursor: pointer; font-family: inherit; }
+    #muteBtn:hover { border-color: var(--neon); }
+
+    #chat {
+        position: fixed;
+        left: 10px;
+        top: 58px;                 /* up in the sky so it never covers the walkable ground */
+        width: min(380px, calc(100vw - 20px));
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    #log {
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 6px 10px;
+        font-size: 13px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+    #log:empty { display: none; }
+    #log b { color: var(--neon); font-weight: 600; margin-right: 6px; }
+    #log .sys { color: var(--muted); font-style: italic; }
+    #chatInput {
+        width: 100%;
+        padding: 9px 12px;
+        font: inherit;
+        font-size: 14px;
+        color: var(--ink);
+        background: var(--panel);
+        border: 1px solid var(--neon-soft);
+        border-radius: 10px;
+    }
+    #chatInput::placeholder { color: var(--muted); }
+
+    #banner {
+        position: fixed;
+        left: 50%;
+        top: 56px;
+        transform: translateX(-50%);
+        padding: 8px 14px;
+        font-size: 13px;
+        max-width: calc(100vw - 24px);
+        text-align: center;
+    }
+
+    /* ---------- Join screen ---------- */
+    #join {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: radial-gradient(ellipse at 50% 45%, rgba(5, 9, 20, 0.55), rgba(5, 9, 20, 0.92));
+    }
+    #joinCard {
+        width: min(100%, 390px);
+        padding: 26px 26px 22px;
+        border-radius: 14px;
+        box-shadow: 0 0 34px rgba(217, 236, 26, 0.16);
+    }
+    #joinCard h1 {
+        margin: 0 0 20px;
+        text-align: center;
+        font-family: Georgia, "Times New Roman", serif;
+        font-style: italic;
+        font-weight: 700;
+        line-height: 1.05;
+    }
+    #joinCard .iron {
+        display: block;
+        font-size: 46px;
+        color: var(--neon);
+        text-shadow: 0 0 6px rgba(217, 236, 26, 0.85), 0 0 22px rgba(217, 236, 26, 0.45);
+    }
+    #joinCard .cafe {
+        display: block;
+        margin-top: 2px;
+        font-size: 24px;
+        color: var(--red);
+        text-shadow: 0 0 6px rgba(255, 51, 80, 0.85), 0 0 18px rgba(255, 51, 80, 0.4);
+    }
+    #joinCard label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    #nameInput {
+        width: 100%;
+        padding: 11px 12px;
+        font: inherit;
+        font-size: 16px;
+        color: var(--ink);
+        background: #0c1230;
+        border: 1px solid #39427a;
+        border-radius: 8px;
+    }
+    #nameInput:focus-visible,
+    #chatInput:focus-visible,
+    #joinBtn:focus-visible,
+    #muteBtn:focus-visible {
+        outline: 2px solid var(--neon);
+        outline-offset: 2px;
+    }
+    #joinBtn {
+        width: 100%;
+        margin-top: 12px;
+        padding: 12px;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 700;
+        color: #141a00;
+        background: var(--neon);
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    #joinBtn:disabled { opacity: 0.55; cursor: default; }
+    #joinMsg {
+        min-height: 20px;
+        margin: 10px 0 0;
+        font-size: 13px;
+        color: #ffb3bf;
+    }
+    #serverStatus {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+    }
+    #keys {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 10px;
+        align-items: center;
+        margin: 16px 0 0;
+        padding-top: 14px;
+        border-top: 1px solid rgba(142, 154, 196, 0.25);
+        font-size: 13px;
+        color: var(--muted);
+    }
+    #keys dt { margin: 0; }
+    #keys dd { margin: 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; animation: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<div id="world"></div>
+
+<div id="hud" hidden>
+    <div id="hint" class="panel">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
+        <span><kbd>Space</kbd> jump</span>
+        <span><kbd>1</kbd> drink</span>
+        <span><kbd>2</kbd> burger</span>
+        <span><kbd>3</kbd> dance</span>
+        <span><kbd>Enter</kbd> chat</span>
+    </div>
+    <div id="topRight">
+        <div id="online" class="panel">1 online</div>
+        <button id="muteBtn" class="panel" type="button">🔊 Sound on</button>
+    </div>
+</div>
+
+<div id="chat" hidden>
+    <div id="log" class="panel" aria-live="polite"></div>
+    <form id="chatForm" autocomplete="off">
+        <input id="chatInput" type="text" maxlength="100" placeholder="Press Enter to chat" aria-label="Chat message">
+    </form>
+</div>
+
+<div id="banner" class="panel" hidden></div>
+
+<div id="join">
+    <form id="joinCard" class="panel" autocomplete="off">
+        <h1><span class="iron">The Iron</span><span class="cafe">Café</span></h1>
+        <label for="nameInput">Choose your name</label>
+        <input id="nameInput" type="text" maxlength="16" placeholder="2 to 16 characters" spellcheck="false" autofocus>
+        <button id="joinBtn" type="submit">Join the world</button>
+        <p id="joinMsg" role="alert"></p>
+        <p id="serverStatus">Connecting to the server…</p>
+        <dl id="keys">
+            <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Walk around</dd>
+            <dt><kbd>Space</kbd></dt><dd>Jump</dd>
+            <dt><kbd>1</kbd></dt><dd>Drink</dd>
+            <dt><kbd>2</kbd></dt><dd>Cheeseburger</dd>
+            <dt><kbd>3</kbd></dt><dd>Dance</dd>
+            <dt><kbd>Enter</kbd></dt><dd>Chat with everyone</dd>
+        </dl>
+    </form>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   SETTINGS: the things you will most likely want to change
+   ===================================================================== */
+const CONFIG = {
+    // Leave empty when the server also serves this page (the normal setup).
+    // If this page lives somewhere else, put your server here, e.g. 'wss://your-game.onrender.com/ws'
+    SERVER_URL: '',
+    CONNECT_TIMEOUT_MS: 45000,      // how long to wait for a sleeping server before playing solo
+
+    WORLD_W: 1000, WORLD_H: 588,    // size of background.webp
+    GROUND_MIN_Y: 478,              // farthest back a player can walk (the building wall)
+    GROUND_MAX_Y: 574,              // closest to the screen
+    BACK_SCALE: 0.72,               // how small players get at the far end of the ground
+
+    SPRITE_H: 120,                  // height of a player at the front
+    SPEED_X: 230,                   // walking speed, left and right
+    SPEED_Y: 110,                   // walking speed, toward and away
+    JUMP_TIME: 0.7,                 // seconds in the air
+    JUMP_HEIGHT: 70,                // how high a jump goes
+
+    SEND_MS: 66,                    // how often your position is sent
+    MUSIC_URL: 'audio.mp3',         // background music: replace public/audio.mp3 with your own file
+    MUSIC_VOL: 0.25,
+    SFX_VOL: 0.25,
+    DANCE_MUSIC_VOL: 0.4
+};
+
+// Pictures. Files in /assets are already lined up with each other.
+const ASSETS = {
+    idle:   'assets/Idle_aligned.gif',
+    // Walk is still the original upload. Swap in an aligned file once you have one.
+    walk:   'https://i.postimg.cc/WFcdm91T/Walk.gif',
+    drink:  'assets/Drink_emote_aligned.gif',
+    burger: 'assets/Cheeseburger_emote_aligned.gif',
+    dance:  'assets/Monster_mash_dance_aligned.gif',
+    jumpSheet: 'assets/Jump_sheet.png',   // 10 jump frames in a row
+    jumpFrames: 10
+};
+
+// Sounds
+const SOUNDS = {
+    munch:       'https://www.image2url.com/r2/default/audio/1793499241478-e7f57d12-d00a-43d3-8ab2-66434272d5a3.mp3',
+    cheeseburger:'https://www.image2url.com/r2/default/audio/1793499104907-c222d6b9-0b13-4c34-8d57-dd0c34e5161b.mp3',
+    jump:        'https://www.image2url.com/r2/default/audio/1793499064199-6a79d910-5f71-4404-b08c-3cdaf4eaf640.mp3',
+    drink:       'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b.mp3',
+    walk:        'https://www.image2url.com/r2/default/audio/1793499203708-68012539-3913-46b4-a77f-1ef34b5c565e.mp3',
+    dance:       'https://uploads.pastewaves.com/uploads/86a7c272-373a-400e-b47f-4d15ac7ef156/audio.mp3'
+};
+
+// How long each emote lasts (matches the GIF lengths)
+const EMOTE_MS = { drink: 1740, burger: 1590, dance: 14870 };
+
+/* =====================================================================
+   Setup
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const world = $('world');
+const joinEl = $('join'), joinCard = $('joinCard'), nameInput = $('nameInput');
+const joinBtn = $('joinBtn'), joinMsg = $('joinMsg'), serverStatus = $('serverStatus');
+const hud = $('hud'), chatBox = $('chat'), logEl = $('log'), chatForm = $('chatForm');
+const chatInput = $('chatInput'), banner = $('banner'), onlineEl = $('online'), muteBtn = $('muteBtn');
+
+const SPRITE_H = CONFIG.SPRITE_H;
+const SPRITE_W = SPRITE_H * 0.88;                  // the pictures are 880 x 1000
+const CHAR_H = SPRITE_H * 0.896;                   // the character is 89.6% of the picture height
+const FEET_PAD = SPRITE_H * 0.04;                  // empty space under the feet in each picture
+const DANCE_SCALE = 1.28 * SPRITE_H / SPRITE_W;    // the dance picture has a wider canvas, so it is scaled up to match
+const JUMP_FRAMES = ASSETS.jumpFrames;
+
+document.documentElement.style.setProperty('--sw', SPRITE_W + 'px');
+document.documentElement.style.setProperty('--sh', SPRITE_H + 'px');
+
+function layout() {
+    const s = Math.min(innerWidth / CONFIG.WORLD_W, innerHeight / CONFIG.WORLD_H);
+    world.style.transform = 'scale(' + s + ')';
+    world.style.left = (innerWidth - CONFIG.WORLD_W * s) / 2 + 'px';
+    world.style.top = (innerHeight - CONFIG.WORLD_H * s) / 2 + 'px';
+}
+addEventListener('resize', layout);
+layout();
+
+let muted = false;
+try { muted = localStorage.getItem('noobworld-muted') === '1'; } catch (e) { /* storage may be blocked */ }
+try { nameInput.value = localStorage.getItem('noobworld-name') || ''; } catch (e) { /* ignore */ }
+
+/* =====================================================================
+   Sound
+   ===================================================================== */
+const sfx = {};
+Object.keys(SOUNDS).forEach((k) => {
+    if (k === 'walk' || k === 'dance') return;
+    const a = new Audio(SOUNDS[k]);
+    a.preload = 'auto';
+    sfx[k] = a;
+});
+
+function playSfx(name, volume) {
+    if (muted || !sfx[name]) return;
+    const a = sfx[name].cloneNode();
+    a.volume = Math.min(1, CONFIG.SFX_VOL * volume);
+    a.play().catch(() => {});
+}
+
+const bgMusic = new Audio(CONFIG.MUSIC_URL);
+bgMusic.loop = true;
+bgMusic.volume = CONFIG.MUSIC_VOL;
+
+let danceAudio = null, danceOwner = null;
+
+function duckMusic(on) { bgMusic.volume = on ? CONFIG.MUSIC_VOL * 0.3 : CONFIG.MUSIC_VOL; }
+
+function stopDanceMusic() {
+    if (danceAudio) { danceAudio.pause(); danceAudio = null; }
+    danceOwner = null;
+    duckMusic(false);
+}
+
+function startDanceMusic(ownerId, isMe) {
+    if (muted) return;
+    // If someone else's music is playing, only take over when it is my own dance
+    if (danceAudio && !isMe) return;
+    stopDanceMusic();
+    danceOwner = ownerId;
+    danceAudio = new Audio(SOUNDS.dance);
+    danceAudio.volume = isMe ? CONFIG.DANCE_MUSIC_VOL : CONFIG.DANCE_MUSIC_VOL * 0.4;
+    danceAudio.play().catch(() => {});
+    duckMusic(true);
+}
+
+let walkAudio = null;
+function setFootsteps(on) {
+    if (on && !muted) {
+        if (!walkAudio) {
+            walkAudio = new Audio(SOUNDS.walk);
+            walkAudio.loop = true;
+            walkAudio.volume = CONFIG.SFX_VOL * 0.5;
+        }
+        if (walkAudio.paused) walkAudio.play().catch(() => {});
+    } else if (walkAudio && !walkAudio.paused) {
+        walkAudio.pause();
+        walkAudio.currentTime = 0;
+    }
+}
+
+function setMuted(value) {
+    muted = value;
+    muteBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+    try { localStorage.setItem('noobworld-muted', muted ? '1' : '0'); } catch (e) { /* ignore */ }
+    if (muted) {
+        bgMusic.pause();
+        stopDanceMusic();
+        setFootsteps(false);
+    } else if (joined) {
+        bgMusic.play().catch(() => {});
+    }
+}
+muteBtn.addEventListener('click', () => { setMuted(!muted); muteBtn.blur(); });
+muteBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+
+/* =====================================================================
+   Pictures
+   ===================================================================== */
+// Keep copies of the emote pictures in memory so each emote starts from its first frame instantly
+const blobs = {};
+['drink', 'burger', 'dance'].forEach((k) => {
+    const url = ASSETS[k];
+    fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject())).then((b) => { blobs[url] = b; }).catch(() => {});
+});
+
+// Preload the rest, and fall back to the idle picture if the walk picture cannot load
+['idle', 'jumpSheet'].forEach((k) => { new Image().src = ASSETS[k]; });
+const walkTest = new Image();
+walkTest.onerror = () => { ASSETS.walk = ASSETS.idle; };
+walkTest.src = ASSETS.walk;
+
+function setImage(p, url, restart) {
+    if (p.imgKey === url && !restart) return;
+    p.imgKey = url;
+    p.sprite.style.backgroundSize = 'contain';
+    p.sprite.style.backgroundPosition = 'center bottom';
+    let src = url;
+    if (restart && blobs[url]) {
+        if (p.blobUrl) URL.revokeObjectURL(p.blobUrl);
+        p.blobUrl = URL.createObjectURL(blobs[url]);
+        src = p.blobUrl;
+    }
+    p.sprite.style.backgroundImage = 'url("' + src + '")';
+}
+
+function showJumpSheet(p) {
+    p.imgKey = 'jump';
+    p.sprite.style.backgroundImage = 'url("' + ASSETS.jumpSheet + '")';
+    p.sprite.style.backgroundSize = (JUMP_FRAMES * 100) + '% 100%';
+    p.sprite.style.backgroundPosition = '0% 0';
+}
+
+/* =====================================================================
+   Players
+   ===================================================================== */
+const players = new Map();
+let me = null;
+
+function depthScale(y) {
+    const t = Math.min(1, Math.max(0, (y - CONFIG.GROUND_MIN_Y) / (CONFIG.GROUND_MAX_Y - CONFIG.GROUND_MIN_Y)));
+    return CONFIG.BACK_SCALE + (1 - CONFIG.BACK_SCALE) * t;
+}
+
+function createPlayer(info, isMe) {
+    const el = document.createElement('div');
+    el.className = 'player';
+    const sprite = document.createElement('div');
+    sprite.className = 'sprite';
+    const over = document.createElement('div');
+    over.className = 'over';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    const tag = document.createElement('div');
+    tag.className = 'tag' + (isMe ? ' me' : '');
+    tag.textContent = info.name;
+    over.append(bubble, tag);
+    el.append(sprite, over);
+    world.appendChild(el);
+
+    const p = {
+        id: info.id, name: info.name, isMe,
+        el, sprite, over, bubble,
+        x: info.x, y: info.y, jy: info.jy || 0, f: info.f ? 1 : 0, a: null,
+        tx: info.x, ty: info.y, tjy: info.jy || 0,
+        animStart: 0, imgKey: '', blobUrl: null, bubbleTimer: 0
+    };
+    players.set(p.id, p);
+    applyAnim(p, info.a || 'idle');
+    renderPlayer(p, performance.now());
+    updateOnline();
+    return p;
+}
+
+function removePlayer(id) {
+    const p = players.get(id);
+    if (!p) return;
+    if (danceOwner === id) stopDanceMusic();
+    if (p.blobUrl) URL.revokeObjectURL(p.blobUrl);
+    clearTimeout(p.bubbleTimer);
+    p.el.remove();
+    players.delete(id);
+    updateOnline();
+}
+
+function updateOnline() { onlineEl.textContent = players.size + ' online'; }
+
+function applyAnim(p, a) {
+    const prev = p.a;
+    if (prev === 'dance' && a !== 'dance' && danceOwner === p.id) stopDanceMusic();
+    p.a = a;
+    p.animStart = performance.now();
+
+    switch (a) {
+        case 'jump':   showJumpSheet(p); break;
+        case 'walk':   setImage(p, ASSETS.walk, false); break;
+        case 'drink':  setImage(p, ASSETS.drink, true); break;
+        case 'burger': setImage(p, ASSETS.burger, true); break;
+        case 'dance':  setImage(p, ASSETS.dance, true); break;
+        default:       setImage(p, ASSETS.idle, false);
+    }
+
+    if (prev === a) return;
+    const vol = p.isMe ? 1 : 0.4;
+    if (a === 'jump') playSfx('jump', vol);
+    if (a === 'drink') playSfx('drink', vol);
+    if (a === 'burger') {
+        playSfx('cheeseburger', vol);
+        setTimeout(() => { if (p.a === 'burger') playSfx('munch', vol); }, 500);
+    }
+    if (a === 'dance') startDanceMusic(p.id, p.isMe);
+}
+
+function renderPlayer(p, now) {
+    const s = depthScale(p.y);
+    const lift = p.jy * s;
+    let sx = (p.f ? -1 : 1) * s;
+    let sy = s;
+    if (p.a === 'dance') { sx *= DANCE_SCALE; sy *= DANCE_SCALE; }
+
+    p.el.style.transform = 'translate(' + p.x.toFixed(1) + 'px,' + p.y.toFixed(1) + 'px)';
+    p.el.style.zIndex = String(Math.round(p.y));
+    p.sprite.style.transform =
+        'translateY(' + (FEET_PAD * s - lift).toFixed(1) + 'px) scale(' + sx.toFixed(3) + ',' + sy.toFixed(3) + ')';
+    p.over.style.transform =
+        'translate(-50%,-100%) translateY(' + (-(CHAR_H * s + lift) - 2).toFixed(1) + 'px)';
+
+    if (p.a === 'jump') {
+        const idx = Math.min(JUMP_FRAMES - 1, Math.floor(((now - p.animStart) / (CONFIG.JUMP_TIME * 1000)) * JUMP_FRAMES));
+        p.sprite.style.backgroundPosition = (idx / (JUMP_FRAMES - 1) * 100).toFixed(2) + '% 0';
+    }
+}
+
+function showBubble(p, text) {
+    p.bubble.textContent = text;
+    p.bubble.classList.add('show');
+    clearTimeout(p.bubbleTimer);
+    p.bubbleTimer = setTimeout(() => p.bubble.classList.remove('show'), 5500);
+}
+
+/* =====================================================================
+   Chat log
+   ===================================================================== */
+function addLog(name, text, system) {
+    const row = document.createElement('div');
+    if (system) {
+        row.className = 'sys';
+        row.textContent = text;
+    } else {
+        const b = document.createElement('b');
+        b.textContent = name;
+        row.append(b, document.createTextNode(text));
+    }
+    logEl.appendChild(row);
+    while (logEl.children.length > 40) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+function showBanner(text) {
+    banner.textContent = text;
+    banner.hidden = false;
+}
+
+/* =====================================================================
+   Input
+   ===================================================================== */
+const keys = new Set();
+const EMOTE_KEYS = { Digit1: 'drink', Numpad1: 'drink', Digit2: 'burger', Numpad2: 'burger', Digit3: 'dance', Numpad3: 'dance' };
+
+function typing() { return document.activeElement === chatInput; }
+
+addEventListener('keydown', (e) => {
+    if (!joined) return;
+    if (typing()) {
+        if (e.code === 'Escape') chatInput.blur();
+        return;
+    }
+    if (e.code === 'Enter') {
+        e.preventDefault();
+        chatInput.focus();
+        return;
+    }
+    if (e.code === 'Space') e.preventDefault();
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    keys.add(e.code);
+    if (e.repeat) return;
+
+    if (e.code === 'Space') startJump();
+    if (EMOTE_KEYS[e.code]) startEmote(EMOTE_KEYS[e.code]);
+});
+addEventListener('keyup', (e) => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+world.addEventListener('pointerdown', () => { window.focus(); });
+
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.replace(/\s+/g, ' ').trim().slice(0, 100);
+    chatInput.value = '';
+    chatInput.blur();
+    if (!text || !me) return;
+    if (soloMode) {
+        addLog(me.name, text);
+        showBubble(me, text);
+    } else if (wsReady) {
+        ws.send(JSON.stringify({ t: 'chat', text }));
+    }
+});
+
+/* =====================================================================
+   Your own character
+   ===================================================================== */
+let jumping = false, jumpT = 0;
+let emote = null, emoteEnd = 0;
+
+function startJump() {
+    if (!me || jumping) return;
+    emote = null;
+    jumping = true;
+    jumpT = 0;
+}
+
+function startEmote(name) {
+    if (!me || jumping) return;
+    emote = name;
+    emoteEnd = performance.now() + EMOTE_MS[name];
+}
+
+function updateMe(dt, now) {
+    let dx = 0, dy = 0;
+    if (!typing()) {
+        dx = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+        dy = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
+    }
+    const moving = dx !== 0 || dy !== 0;
+
+    if (moving) emote = null;                      // walking cancels an emote
+    if (emote && now >= emoteEnd) emote = null;
+
+    if (moving) {
+        const len = Math.hypot(dx, dy);
+        me.x += (dx / len) * CONFIG.SPEED_X * dt;
+        me.y += (dy / len) * CONFIG.SPEED_Y * dt;
+        if (dx > 0) me.f = 1;
+        if (dx < 0) me.f = 0;
+    }
+    me.x = Math.min(960, Math.max(40, me.x));
+    me.y = Math.min(CONFIG.GROUND_MAX_Y, Math.max(CONFIG.GROUND_MIN_Y, me.y));
+
+    if (jumping) {
+        jumpT += dt;
+        if (jumpT >= CONFIG.JUMP_TIME) {
+            jumping = false;
+            me.jy = 0;
+        } else {
+            const u = jumpT / CONFIG.JUMP_TIME;
+            me.jy = 4 * CONFIG.JUMP_HEIGHT * u * (1 - u);
+        }
+    }
+
+    const a = jumping ? 'jump' : (emote || (moving ? 'walk' : 'idle'));
+    if (a !== me.a) applyAnim(me, a);
+    setFootsteps(a === 'walk');
+}
+
+/* =====================================================================
+   Network
+   ===================================================================== */
+let ws = null, wsReady = false, joined = false, soloMode = false, gaveUp = false;
+let pendingName = null;
+let reconnecting = false, reconnectStart = 0, lastPos = null;
+const connectStart = performance.now();
+const lastSent = { x: -1, y: -1, jy: -1, f: -1, a: '', at: 0 };
+
+function setStatus(text) { serverStatus.textContent = text; }
+
+function serverUrl() {
+    if (CONFIG.SERVER_URL) return CONFIG.SERVER_URL;
+    if (location.host) return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+    return 'ws://localhost:3000/ws';
+}
+
+function connect() {
+    if ((joined && !reconnecting) || gaveUp) return;
+    try {
+        ws = new WebSocket(serverUrl());
+    } catch (e) {
+        return retry();
+    }
+    ws.onopen = () => {
+        wsReady = true;
+        setStatus('Connected. Pick a name to join.');
+        if (reconnecting && me) sendJoin(me.name);
+        else if (pendingName) sendJoin(pendingName);
+    };
+    ws.onmessage = (ev) => {
+        let m;
+        try { m = JSON.parse(ev.data); } catch (e) { return; }
+        onServer(m);
+    };
+    ws.onclose = () => {
+        wsReady = false;
+        if (joined && !soloMode) {
+            beginReconnect();
+        } else if (!joined) {
+            setStatus('Waking up the server…');
+            retry();
+        }
+    };
+    ws.onerror = () => {};
+}
+
+// Free hosts restart now and then, so try to get back in automatically
+function beginReconnect() {
+    if (!me) return;
+    if (!reconnecting) {
+        reconnecting = true;
+        reconnectStart = performance.now();
+        lastPos = { x: me.x, y: me.y, f: me.f };
+    }
+    if (performance.now() - reconnectStart > 90000) {
+        showBanner('Could not reconnect. Refresh the page to try again.');
+        return;
+    }
+    showBanner('Lost the connection. Reconnecting…');
+    setTimeout(connect, 2500);
+}
+
+function retry() {
+    if (joined || gaveUp) return;
+    if (performance.now() - connectStart > CONFIG.CONNECT_TIMEOUT_MS) {
+        gaveUp = true;
+        setStatus('The server is not reachable. You can still join and walk around solo.');
+        if (pendingName) startSolo(pendingName);
+        return;
+    }
+    setTimeout(connect, 2500);
+}
+
+function sendJoin(name) {
+    ws.send(JSON.stringify({ t: 'join', name }));
+}
+
+function onServer(m) {
+    switch (m.t) {
+        case 'welcome':
+            if (reconnecting) {
+                // Start fresh with the new connection, but keep standing where you were
+                [...players.keys()].forEach(removePlayer);
+                jumping = false;
+                emote = null;
+                me = createPlayer(m.you, true);
+                me.x = me.tx = lastPos.x;
+                me.y = me.ty = lastPos.y;
+                me.f = lastPos.f;
+                m.players.forEach((info) => createPlayer(info, false));
+                reconnecting = false;
+                banner.hidden = true;
+                lastSent.at = 0;
+                addLog('', 'Reconnected', true);
+                break;
+            }
+            me = createPlayer(m.you, true);
+            m.players.forEach((info) => createPlayer(info, false));
+            startGame();
+            addLog('', 'Welcome, ' + me.name + '!', true);
+            break;
+        case 'error':
+            if (reconnecting) {
+                // The server may still hold your old session for a few seconds. Try again shortly.
+                setTimeout(() => { if (wsReady && me) sendJoin(me.name); }, 2500);
+                break;
+            }
+            joinMsg.textContent = m.text || 'Could not join.';
+            joinBtn.disabled = false;
+            pendingName = null;
+            nameInput.focus();
+            break;
+        case 'join':
+            if (joined && !players.has(m.p.id)) {
+                createPlayer(m.p, false);
+                addLog('', m.p.name + ' joined', true);
+            }
+            break;
+        case 'leave': {
+            const p = players.get(m.id);
+            if (p) {
+                addLog('', p.name + ' left', true);
+                removePlayer(m.id);
+            }
+            break;
+        }
+        case 'snap':
+            m.p.forEach((row) => {
+                const p = players.get(row[0]);
+                if (!p || p.isMe) return;
+                p.tx = row[1]; p.ty = row[2]; p.tjy = row[3]; p.f = row[4];
+                if (row[5] !== p.a) applyAnim(p, row[5]);
+            });
+            break;
+        case 'chat': {
+            const p = players.get(m.id);
+            addLog(m.name, m.text);
+            if (p) showBubble(p, m.text);
+            break;
+        }
+    }
+}
+
+function sendState(now) {
+    if (!joined || soloMode || !wsReady || !me) return;
+    const x = Math.round(me.x), y = Math.round(me.y), jy = Math.round(me.jy);
+    const changed = x !== lastSent.x || y !== lastSent.y || jy !== lastSent.jy || me.f !== lastSent.f || me.a !== lastSent.a;
+    if (!changed && now - lastSent.at < 500) return;
+    lastSent.x = x; lastSent.y = y; lastSent.jy = jy; lastSent.f = me.f; lastSent.a = me.a; lastSent.at = now;
+    ws.send(JSON.stringify({ t: 'state', x, y, jy, f: me.f, a: me.a }));
+}
+setInterval(() => sendState(performance.now()), CONFIG.SEND_MS);
+
+/* =====================================================================
+   Joining
+   ===================================================================== */
+function cleanName(s) {
+    return s.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+}
+
+joinCard.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = cleanName(nameInput.value);
+    if (name.length < 2) {
+        joinMsg.textContent = 'Pick a name with 2 to 16 characters.';
+        return;
+    }
+    joinMsg.textContent = '';
+    joinBtn.disabled = true;
+    try { localStorage.setItem('noobworld-name', name); } catch (err) { /* ignore */ }
+
+    // Clicking Join counts as the click browsers need before they allow sound
+    if (!muted) bgMusic.play().catch(() => {});
+
+    pendingName = name;
+    if (wsReady) sendJoin(name);
+    else if (gaveUp) startSolo(name);
+    else joinMsg.textContent = 'Connecting to the server…';
+});
+
+function startSolo(name) {
+    soloMode = true;
+    me = createPlayer({ id: 'solo', name, x: 500, y: 540, jy: 0, f: 0, a: 'idle' }, true);
+    startGame();
+    showBanner('The server is not reachable, so you are playing solo.');
+}
+
+function startGame() {
+    joined = true;
+    joinEl.hidden = true;
+    hud.hidden = false;
+    chatBox.hidden = false;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    window.focus();
+}
+
+/* =====================================================================
+   Main loop
+   ===================================================================== */
+let last = performance.now();
+function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    if (joined && me) {
+        updateMe(dt, now);
+        const k = Math.min(1, dt * 14);
+        players.forEach((p) => {
+            if (p.isMe) return;
+            if (Math.abs(p.tx - p.x) > 220 || Math.abs(p.ty - p.y) > 220) { p.x = p.tx; p.y = p.ty; }
+            p.x += (p.tx - p.x) * k;
+            p.y += (p.ty - p.y) * k;
+            p.jy += (p.tjy - p.jy) * Math.min(1, dt * 24);
+        });
+        players.forEach((p) => renderPlayer(p, now));
+    }
+    requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+connect();
+nameInput.focus();
+})();
+</script>
+</body>
+</html>
