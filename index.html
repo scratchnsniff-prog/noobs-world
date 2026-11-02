@@ -419,6 +419,10 @@ const ROOM_IMAGES = {
     restroom: 'https://i.postimg.cc/fLC4TTJL/Restrooms.jpg'
 };
 
+// Rooms that get rain (picture overlay + rain sound). Edit this list to change where it rains.
+const RAIN_ROOMS = ['exterior', 'stairway'];
+const isRainRoom = (id) => RAIN_ROOMS.includes(id);
+
 const ROOM_ORDER = ['ironCafe', 'exterior', 'stairway', 'disco', 'dining', 'restroom'];
 const ROOM_X = {
     ironCafe: [0, 160],
@@ -792,11 +796,11 @@ function setRoomBackground(roomId) {
     const url = ROOM_IMAGES[roomId];
     world.style.backgroundImage = 'url("' + url + '")';
     world.style.filter = 'brightness(1)';
-    if (roomId === 'exterior' || roomId === 'stairway') {
+    if (isRainRoom(roomId)) {
         world.style.filter = weatherState === 'rain' ? 'brightness(0.8) saturate(0.9)' : 'brightness(1)';
     }
-    roomTint.style.opacity = (roomId === 'exterior' || roomId === 'stairway') && weatherState === 'rain' ? '0.28' : '0';
-    rainTint.style.opacity = (roomId === 'exterior' || roomId === 'stairway') && weatherState === 'rain' ? '1' : '0';
+    roomTint.style.opacity = isRainRoom(roomId) && weatherState === 'rain' ? '0.28' : '0';
+    rainTint.style.opacity = isRainRoom(roomId) && weatherState === 'rain' ? '1' : '0';
 }
 
 function updateAudioForRoom() {
@@ -807,7 +811,7 @@ function updateAudioForRoom() {
     }
 
     const roomId = currentRoomId;
-    const rainRooms = roomId === 'exterior' || roomId === 'stairway';
+    const rainRooms = isRainRoom(roomId);
     const musicRooms = roomId === 'disco' || roomId === 'dining' || roomId === 'restroom';
 
     if (musicRooms) {
@@ -828,11 +832,19 @@ function updateAudioForRoom() {
     rainAudio.pause();
 }
 
+const roomLabel = document.createElement('div');
+roomLabel.style.cssText = 'position:absolute;left:8px;bottom:8px;z-index:50;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.7);color:#fff;font:12px monospace;pointer-events:none;display:none';
+world.appendChild(roomLabel);
+
 function updateRoomState() {
     if (!me) return;
     const roomId = getRoomForX(me.x);
+    if (location.hash === '#debug') {
+        roomLabel.style.display = 'block';
+        roomLabel.textContent = 'room: ' + roomId + (isRainRoom(roomId) ? ' (rain)' : '') + '  x=' + Math.round(me.x);
+    } else roomLabel.style.display = 'none';
     // Rain exists only in the exterior and the stairway, nowhere else
-    const want = (roomId === 'exterior' || roomId === 'stairway') ? 'rain' : 'clear';
+    const want = isRainRoom(roomId) ? 'rain' : 'clear';
     if (roomId !== currentRoomId || want !== weatherState) {
         currentRoomId = roomId;
         weatherState = want;
