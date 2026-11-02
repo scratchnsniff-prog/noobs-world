@@ -904,8 +904,11 @@ function serverUrl() {
     return 'ws://localhost:3000/ws';
 }
 
+let connectAttempts = 0;
 function connect() {
     if ((joined && !reconnecting) || gaveUp) return;
+    connectAttempts++;
+    if (!joined) setStatus('Connecting to ' + serverUrl() + ' (try ' + connectAttempts + ')…');
     try {
         ws = new WebSocket(serverUrl());
     } catch (e) {
@@ -922,16 +925,17 @@ function connect() {
         try { m = JSON.parse(ev.data); } catch (e) { return; }
         onServer(m);
     };
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
         wsReady = false;
+        console.log('WebSocket closed', ev && ev.code, ev && ev.reason);
         if (joined && !soloMode) {
             beginReconnect();
         } else if (!joined) {
-            setStatus('Waking up the server…');
+            setStatus('No connection yet (try ' + connectAttempts + ', code ' + (ev ? ev.code : '?') + '). Server may be waking up, retrying…');
             retry();
         }
     };
-    ws.onerror = () => {};
+    ws.onerror = () => { console.log('WebSocket error for', serverUrl()); };
 }
 
 function beginReconnect() {
