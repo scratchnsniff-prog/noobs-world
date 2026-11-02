@@ -15,7 +15,18 @@ const crypto = require('crypto');
 
 // ---------- Settings you can change ----------
 const PORT = Number(process.env.PORT) || 3000;
-const PUBLIC_DIR = path.join(__dirname, 'public');
+// Normally the game files live in the /public folder. If an upload to GitHub lost that
+// folder, fall back to the folder next to server.js so the game still starts.
+function findPublicDir() {
+  const candidates = [path.join(__dirname, 'public'), __dirname];
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, 'index.html'))) return dir;
+  }
+  return candidates[0];
+}
+const PUBLIC_DIR = findPublicDir();
+const FLAT_LAYOUT = PUBLIC_DIR === __dirname;
+const PRIVATE_FILES = new Set(['server.js', 'package.json', 'package-lock.json', 'readme.md']);
 
 const MAX_PLAYERS = 60;            // people allowed in the world at once
 const MAX_SOCKETS = 200;           // open connections allowed (includes people on the name screen)
@@ -75,11 +86,28 @@ function serveStatic(req, res) {
     return res.end('Forbidden');
   }
 
-  fs.stat(filePath, (err, stat) => {
-    if (err || !stat.isFile()) {
+  const tryFiles = [filePath];
+  // A flat upload may have lost the /assets folder, so also try the file name on its own
+  const flatPath = path.join(PUBLIC_DIR, path.basename(urlPath));
+  if (flatPath !== filePath) tryFiles.push(flatPath);
+
+  const sendFirstFound = (i) => {
+    if (i >= tryFiles.length) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       return res.end('Not found');
     }
+    if (FLAT_LAYOUT && PRIVATE_FILES.has(path.basename(tryFiles[i]).toLowerCase())) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      return res.end('Not found');
+    }
+    fs.stat(tryFiles[i], (err, stat) => {
+      if (err || !stat.isFile()) return sendFirstFound(i + 1);
+      sendFile(tryFiles[i], stat);
+    });
+  };
+  sendFirstFound(0);
+
+  function sendFile(filePath, stat) {
 
     const ext = path.extname(filePath).toLowerCase();
     const headers = {
@@ -113,7 +141,7 @@ function serveStatic(req, res) {
     res.writeHead(status, headers);
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(filePath, { start, end }).pipe(res);
-  });
+  }
 }
 
 const server = http.createServer(serveStatic);
@@ -425,6 +453,10 @@ setInterval(() => {
 }, 25000);
 
 server.listen(PORT, () => {
+  console.log('Serving game files from: ' + PUBLIC_DIR);
+  if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
+    console.log('WARNING: index.html was not found. Files next to server.js: ' + fs.readdirSync(__dirname).join(', '));
+  }
   console.log('Noob World is running on port ' + PORT);
   console.log('Open http://localhost:' + PORT + ' in your browser');
 });
