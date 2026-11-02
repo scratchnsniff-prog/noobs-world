@@ -411,15 +411,15 @@ const CONFIG = {
     GROUND_MAX_Y: 574,
     BACK_SCALE: 0.72,
 
-    SPRITE_H: 240,
+    SPRITE_H: 440,
     SPEED_X: 230,
     SPEED_Y: 110,
     JUMP_TIME: 0.7,
-    JUMP_HEIGHT: 70,
+    JUMP_HEIGHT: 110,
 
     SEND_MS: 66,
-    MUSIC_URL: 'https://www.image2url.com/r2/default/audio/1793599923817-73f7b374-67a7-4c6c-9711-a8257c610173.mp3',
-    RAIN_URL: 'https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3',
+    MUSIC_URL: 'https://www.image2url.com/r2/default/audio/1793599952198-fcb61cd8-fbbf-498f-bd86-b82b4f0e3092.mp3',
+    RAIN_URL: 'https://www.image2url.com/r2/default/audio/1793599923817-73f7b374-67a7-4c6c-9711-a8257c610173.mp3',
     MUSIC_VOL: 0.20,
     RAIN_VOL: 0.18,
     SFX_VOL: 0.25,
@@ -439,19 +439,27 @@ const ROOM_IMAGES = {
 const RAIN_ROOMS = ['exterior', 'stairway'];
 const isRainRoom = (id) => RAIN_ROOMS.includes(id);
 
-const ROOM_ORDER = ['exterior', 'stairway', 'disco', 'dining', 'restroom'];
+const ROOM_ORDER = ['exterior', 'stairway', 'disco', 'restroom', 'dining'];
 // Walk to the far left or right edge of a room to go through its exit.
-// To change where an exit leads, edit this list. side: 'left' or 'right'.
+// The route is Exterior > Stairway > Disco > Restroom > Dining area.
+// side: which edge of THIS room the exit is on.
+// arrive: which side of the NEXT room you appear on (optional; the default is the opposite
+//         side, so leaving through the left edge puts you on the right of the next room).
 const EXITS = {
-    exterior: [{ side: 'right', to: 'stairway' }],
-    stairway: [{ side: 'left', to: 'exterior' }, { side: 'right', to: 'disco' }],
-    disco:    [{ side: 'left', to: 'stairway' }, { side: 'right', to: 'dining' }],
-    dining:   [{ side: 'left', to: 'disco' },    { side: 'right', to: 'restroom' }],
-    restroom: [{ side: 'left', to: 'dining' }]
+    exterior: [{ side: 'left',  to: 'stairway' }],
+    stairway: [{ side: 'left',  to: 'disco' },    { side: 'right', to: 'exterior' }],
+    disco:    [{ side: 'left',  to: 'restroom', arrive: 'left' }, { side: 'right', to: 'stairway' }],
+    restroom: [{ side: 'right', to: 'dining' },   { side: 'left',  to: 'disco' }],
+    dining:   [{ side: 'left',  to: 'restroom' }]
 };
+
+// In these rooms W and S do nothing: you can only walk left and right (and jump).
+const NO_DEPTH_ROOMS = ['restroom', 'dining'];
+const noDepth = (id) => NO_DEPTH_ROOMS.includes(id);
 const ROOM_NAMES = { exterior: 'Outside', stairway: 'Stairway', disco: 'Disco', dining: 'Dining area', restroom: 'Restrooms' };
 const EXIT_X = { left: 65, right: 935 };
 const ENTER_X = { left: 120, right: 880 };
+const SPAWN = { x: 800, y: 560 };   // first arrival in the Exterior
 
 const ASSETS = {
     idle: 'assets/Idle_aligned.gif',
@@ -467,7 +475,7 @@ const SOUNDS = {
     munch: 'https://www.image2url.com/r2/default/audio/1793499241478-e7f57d12-d00a-43d3-8ab2-66434272d5a3.mp3',
     cheeseburger: 'https://www.image2url.com/r2/default/audio/1793499104907-c222d6b9-0b13-4c34-8d57-dd0c34e5161b.mp3',
     jump: 'https://www.image2url.com/r2/default/audio/1793499064199-6a79d910-5f71-4404-b08c-3cdaf4eaf640.mp3',
-    drink: 'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b3.mp3',
+    drink: 'https://www.image2url.com/r2/default/audio/1793499152384-075cffc9-04ed-4433-b587-78a9324e8d4b.mp3',
     walk: 'https://www.image2url.com/r2/default/audio/1793499203708-68012539-3913-46b4-a77f-1ef34b5c565e.mp3',
     dance: ''
 };
@@ -861,6 +869,7 @@ function buildExitHints() {
 function enterRoom(id, arriveSide) {
     currentRoomId = id;
     me.x = me.tx = ENTER_X[arriveSide];
+    if (noDepth(id)) me.y = me.ty = CONFIG.GROUND_MAX_Y;
     for (const [pid, q] of [...players]) if (!q.isMe) removePlayer(pid);
     setRoomBackground(id);
     updateAudioForRoom();
@@ -876,7 +885,7 @@ function updateRoomState() {
     } else roomLabel.style.display = 'none';
     for (const ex of EXITS[currentRoomId] || []) {
         if ((ex.side === 'left' && me.x <= EXIT_X.left) || (ex.side === 'right' && me.x >= EXIT_X.right)) {
-            enterRoom(ex.to, ex.side === 'right' ? 'left' : 'right');
+            enterRoom(ex.to, ex.arrive || (ex.side === 'right' ? 'left' : 'right'));
             return;
         }
     }
@@ -888,6 +897,7 @@ function updateMe(dt, now) {
         dx = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
         dy = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
     }
+    if (noDepth(currentRoomId)) dy = 0;   // no W and S here
     const moving = dx !== 0 || dy !== 0;
 
     if (moving) emote = null;
@@ -902,6 +912,7 @@ function updateMe(dt, now) {
     }
     me.x = Math.min(960, Math.max(40, me.x));
     me.y = Math.min(CONFIG.GROUND_MAX_Y, Math.max(CONFIG.GROUND_MIN_Y, me.y));
+    if (noDepth(currentRoomId)) me.y = CONFIG.GROUND_MAX_Y;
 
     if (jumping) {
         jumpT += dt;
@@ -1113,6 +1124,10 @@ function startGame() {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     window.focus();
     currentRoomId = 'exterior';
+    // a little spread so people who join together do not stand exactly on top of each other
+    me.x = me.tx = SPAWN.x + (Math.random() - 0.5) * 120;
+    me.y = me.ty = SPAWN.y + (Math.random() - 0.5) * 14;
+    lastSent.at = 0;
     setRoomBackground(currentRoomId);
     updateAudioForRoom();
     buildExitHints();
@@ -1147,4 +1162,3 @@ connect();
 </script>
 </body>
 </html>
-
