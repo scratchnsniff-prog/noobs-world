@@ -39,6 +39,7 @@ const BLOCKED_WORDS = [];          // add lowercase words here, e.g. ['word']. T
 
 // The walkable area. Keep these in step with CONFIG in public/index.html.
 const WORLD = { minX: 40, maxX: 960, minY: 478, maxY: 574, maxJump: 120 };
+const ROOMS = new Set(['exterior', 'stairway', 'disco', 'dining', 'restroom']);
 const ANIMS = new Set(['idle', 'walk', 'jump', 'drink', 'burger', 'dance']);
 
 // ---------- Static files ----------
@@ -195,7 +196,7 @@ const clients = new Set();
 const players = new Map(); // id -> player
 
 function publicPlayer(p) {
-  return { id: p.id, name: p.name, x: p.x, y: p.y, jy: p.jy, f: p.f, a: p.a };
+  return { id: p.id, name: p.name, x: p.x, y: p.y, jy: p.jy, f: p.f, a: p.a, r: p.room };
 }
 
 function broadcast(obj, exceptClient) {
@@ -205,13 +206,21 @@ function broadcast(obj, exceptClient) {
   }
 }
 
+// Only players standing in the same room see each other
+function broadcastRoom(room, obj, exceptClient) {
+  const buf = frame(0x1, Buffer.from(JSON.stringify(obj)));
+  for (const c of clients) {
+    if (c.player && c.player.room === room && c !== exceptClient) writeRaw(c, buf);
+  }
+}
+
 function dropClient(client) {
   if (client.closed) return;
   client.closed = true;
   clients.delete(client);
   if (client.player) {
     players.delete(client.player.id);
-    broadcast({ t: 'leave', id: client.player.id });
+    broadcastRoom(client.player.room, { t: 'leave', id: client.player.id });
     console.log('left:', client.player.name, '(' + players.size + ' online)');
   }
   try { client.socket.destroy(); } catch (e) { /* ignore */ }
@@ -278,11 +287,12 @@ function handleMessage(client, text) {
     const player = {
       id: nextId++,
       name,
-      x: 60 + Math.round(Math.random() * 90),   // spawn in the exterior (x 0-300)
+      x: 380 + Math.round(Math.random() * 240),
       y: 540,
       jy: 0,
       f: 0,
       a: 'idle',
+      room: 'exterior',
       dirty: false,
       lastChat: 0
     };
@@ -292,9 +302,9 @@ function handleMessage(client, text) {
     send(client, {
       t: 'welcome',
       you: publicPlayer(player),
-      players: [...players.values()].filter(p => p !== player).map(publicPlayer)
+      players: [...players.values()].filter(p => p !== player && p.room === player.room).map(publicPlayer)
     });
-    broadcast({ t: 'join', p: publicPlayer(player) }, client);
+    broadcastRoom(player.room, { t: 'join', p: publicPlayer(player) }, client);
     console.log('joined:', name, '(' + players.size + ' online)');
     return;
   }
@@ -308,6 +318,15 @@ function handleMessage(client, text) {
     const jy = Math.round(num(msg.jy, 0, WORLD.maxJump, 0));
     const f = msg.f ? 1 : 0;
     const a = ANIMS.has(msg.a) ? msg.a : 'idle';
+    if (typeof msg.r === 'string' && ROOMS.has(msg.r) && msg.r !== p.room) {
+      const old = p.room;
+      p.room = msg.r;
+      broadcastRoom(old, { t: 'leave', id: p.id });
+      p.x = x; p.y = y; p.jy = jy; p.f = f; p.a = a;
+      send(client, { t: 'roomchange', room: p.room, players: [...players.values()].filter(o => o !== p && o.room === p.room).map(publicPlayer) });
+      broadcastRoom(p.room, { t: 'join', p: publicPlayer(p) }, client);
+      return;
+    }
     if (x !== p.x || y !== p.y || jy !== p.jy || f !== p.f || a !== p.a) {
       p.x = x; p.y = y; p.jy = jy; p.f = f; p.a = a;
       p.dirty = true;
@@ -429,14 +448,15 @@ server.on('upgrade', (req, socket) => {
 // ---------- Timers ----------
 // Send out everyone who moved since the last tick
 setInterval(() => {
-  const rows = [];
+  const byRoom = new Map();
   for (const p of players.values()) {
     if (p.dirty) {
-      rows.push([p.id, p.x, p.y, p.jy, p.f, p.a]);
+      if (!byRoom.has(p.room)) byRoom.set(p.room, []);
+      byRoom.get(p.room).push([p.id, p.x, p.y, p.jy, p.f, p.a]);
       p.dirty = false;
     }
   }
-  if (rows.length) broadcast({ t: 'snap', p: rows });
+  for (const [room, rows] of byRoom) broadcastRoom(room, { t: 'snap', p: rows });
 }, SNAPSHOT_MS);
 
 // Drop connections that went quiet, and people who never picked a name
