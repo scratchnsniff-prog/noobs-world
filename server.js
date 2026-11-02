@@ -452,7 +452,12 @@ setInterval(() => {
   }
 }, 25000);
 
-server.listen(PORT, () => {
+process.on('uncaughtException', (err) => { console.error('FATAL uncaught error:', err && err.stack || err); });
+process.on('unhandledRejection', (err) => { console.error('FATAL unhandled rejection:', err && err.stack || err); });
+server.on('error', (err) => { console.error('SERVER FAILED TO START:', err.code, err.message); process.exit(1); });
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('Node ' + process.version + ', PORT env = ' + process.env.PORT);
   console.log('Serving game files from: ' + PUBLIC_DIR);
   if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
     console.log('WARNING: index.html was not found. Files next to server.js: ' + fs.readdirSync(__dirname).join(', '));
