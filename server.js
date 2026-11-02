@@ -278,7 +278,7 @@ function handleMessage(client, text) {
     const player = {
       id: nextId++,
       name,
-      x: 60 + Math.round(Math.random() * 90),   // spawn inside the Iron Café (x 0-160)
+      x: 60 + Math.round(Math.random() * 90),   // spawn in the exterior (x 0-300)
       y: 540,
       jy: 0,
       f: 0,
