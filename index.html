@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#050914">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>The Iron Café</title>
     <style>
         :root {
@@ -249,12 +253,12 @@
             position: fixed;
             inset: 0;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow-y: auto;
             padding: 16px;
             background: radial-gradient(ellipse at 50% 45%, rgba(5, 9, 20, 0.55), rgba(5, 9, 20, 0.92));
         }
         #joinCard {
+            margin: auto;
             width: min(100%, 390px);
             padding: 26px 26px 22px;
             border-radius: 14px;
@@ -343,6 +347,118 @@
         #keys dt { margin: 0; }
         #keys dd { margin: 0; }
 
+
+        /* ---------- Phones and tablets ---------- */
+        body { touch-action: manipulation; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+        body.touch { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        body.touch input { -webkit-user-select: text; user-select: text; }
+
+        #touch { display: none; }
+        body.touch.playing #touch { display: block; }
+        #stick, .tbtn { touch-action: none; }
+
+        #stick {
+            position: fixed;
+            left: calc(22px + env(safe-area-inset-left));
+            bottom: calc(22px + env(safe-area-inset-bottom));
+            width: min(150px, 36vh);
+            height: min(150px, 36vh);
+            border-radius: 50%;
+            background: rgba(7, 11, 28, 0.45);
+            border: 2px solid var(--neon-soft);
+            z-index: 40;
+        }
+        #knob {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 42%;
+            height: 42%;
+            margin: -21% 0 0 -21%;
+            border-radius: 50%;
+            background: rgba(217, 236, 26, 0.75);
+            box-shadow: 0 0 14px rgba(217, 236, 26, 0.4);
+            pointer-events: none;
+        }
+        #actions {
+            position: fixed;
+            right: calc(22px + env(safe-area-inset-right));
+            bottom: calc(22px + env(safe-area-inset-bottom));
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+            z-index: 40;
+        }
+        #emoteRow { display: flex; gap: 12px; }
+        .tbtn {
+            display: grid;
+            place-items: center;
+            width: min(58px, 14vh);
+            height: min(58px, 14vh);
+            padding: 0;
+            border-radius: 50%;
+            border: 2px solid var(--neon-soft);
+            background: rgba(7, 11, 28, 0.62);
+            color: var(--ink);
+            font-family: inherit;
+            font-size: min(26px, 6vh);
+        }
+        .tbtn:active { background: rgba(217, 236, 26, 0.35); border-color: var(--neon); }
+        #tJump {
+            width: min(96px, 24vh);
+            height: min(96px, 24vh);
+            font-size: 16px;
+            font-weight: 700;
+            background: rgba(217, 236, 26, 0.82);
+            border-color: var(--neon);
+            color: #141a00;
+        }
+        #tChat {
+            position: fixed;
+            right: calc(10px + env(safe-area-inset-right));
+            top: calc(54px + env(safe-area-inset-top));
+            width: 44px;
+            height: 44px;
+            font-size: 20px;
+            z-index: 40;
+        }
+
+        body.touch #hint, body.touch #keys { display: none; }
+        body.touch #topRight { top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); }
+        body.touch #chat { top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); width: min(300px, 46vw); }
+        body.touch #log { max-height: 80px; font-size: 12px; }
+        body.touch #chatInput { font-size: 16px; }
+
+        #rotate {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 24px;
+            background: var(--night);
+            color: var(--ink);
+            text-align: center;
+            font-size: 18px;
+        }
+        #rotate .phone { position: relative; width: 46px; height: 76px; border: 3px solid var(--neon); border-radius: 10px; }
+        #rotate .phone::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 14px; height: 3px; margin-left: -7px; border-radius: 2px; background: var(--neon-soft); }
+        @media (orientation: portrait) { body.touch #rotate { display: flex; } }
+
+        /* Short screens (a phone held sideways): a smaller join card */
+        @media (max-height: 520px) {
+            #joinCard { padding: 14px 20px; }
+            #joinCard h1 { margin-bottom: 10px; }
+            #joinCard .iron { font-size: 30px; }
+            #joinCard .cafe { font-size: 18px; }
+            #joinMsg { min-height: 14px; margin-top: 6px; }
+            #keys { display: none; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             * { transition: none !important; animation: none !important; }
         }
@@ -378,6 +494,21 @@
 </div>
 
 <div id="banner" class="panel" hidden></div>
+
+<div id="touch">
+    <div id="stick" aria-label="Move"><div id="knob"></div></div>
+    <div id="actions">
+        <div id="emoteRow">
+            <button class="tbtn" type="button" data-emote="drink" aria-label="Drink">🥤</button>
+            <button class="tbtn" type="button" data-emote="burger" aria-label="Cheeseburger">🍔</button>
+            <button class="tbtn" type="button" data-emote="dance" aria-label="Dance">💃</button>
+        </div>
+        <button id="tJump" class="tbtn" type="button">Jump</button>
+    </div>
+    <button id="tChat" class="tbtn" type="button" aria-label="Chat">💬</button>
+</div>
+
+<div id="rotate"><div class="phone"></div>Turn your phone sideways to play</div>
 
 <div id="join">
     <form id="joinCard" class="panel" autocomplete="off">
@@ -501,7 +632,18 @@ const JUMP_FRAMES = ASSETS.jumpFrames;
 document.documentElement.style.setProperty('--sw', SPRITE_W + 'px');
 document.documentElement.style.setProperty('--sh', SPRITE_H + 'px');
 
+// Phones and tablets: a finger is the main way to point, so show on-screen controls
+const IS_TOUCH = (() => {
+    const q = new URLSearchParams(location.search).get('touch');
+    if (q === '1') return true;
+    if (q === '0') return false;
+    return !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+})();
+document.body.classList.toggle('touch', IS_TOUCH);
+
 function layout() {
+    // keep the world steady while the on-screen keyboard is open
+    if (IS_TOUCH && document.activeElement === chatInput) return;
     const s = Math.min(innerWidth / CONFIG.WORLD_W, innerHeight / CONFIG.WORLD_H);
     world.style.transform = 'scale(' + s + ')';
     world.style.left = (innerWidth - CONFIG.WORLD_W * s) / 2 + 'px';
@@ -1100,6 +1242,7 @@ joinCard.addEventListener('submit', (e) => {
     try { localStorage.setItem('noobworld-name', name); } catch (err) { /* ignore */ }
 
     if (!muted) bgMusic.play().catch(() => {});
+    if (!muted && rainAudio) rainAudio.play().catch(() => {});   // phones need each sound started by a tap
 
     pendingName = name;
     if (wsReady) sendJoin(name);
@@ -1118,6 +1261,7 @@ function startSolo(name) {
 
 function startGame() {
     joined = true;
+    document.body.classList.add('playing');
     joinEl.hidden = true;
     hud.hidden = false;
     chatBox.hidden = false;
@@ -1154,6 +1298,59 @@ function frame(now) {
     requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+
+// ---------- Touch controls ----------
+// They press the same keys and call the same actions as the keyboard does.
+(() => {
+    if (!IS_TOUCH) return;
+    const stick = document.getElementById('stick');
+    const knob = document.getElementById('knob');
+    const setKey = (code, on) => { if (on) keys.add(code); else keys.delete(code); };
+    let stickId = null;
+
+    function moveStick(e) {
+        const r = stick.getBoundingClientRect();
+        let dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+        let dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+        const len = Math.hypot(dx, dy);
+        if (len > 1) { dx /= len; dy /= len; }
+        knob.style.transform = 'translate(' + (dx * r.width * 0.3) + 'px,' + (dy * r.height * 0.3) + 'px)';
+        setKey('KeyA', dx < -0.35);
+        setKey('KeyD', dx > 0.35);
+        setKey('KeyW', dy < -0.5);
+        setKey('KeyS', dy > 0.5);
+    }
+    function endStick(e) {
+        if (e.pointerId !== stickId) return;
+        stickId = null;
+        knob.style.transform = '';
+        ['KeyA', 'KeyD', 'KeyW', 'KeyS'].forEach((k) => keys.delete(k));
+    }
+    stick.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        stickId = e.pointerId;
+        stick.setPointerCapture(e.pointerId);
+        moveStick(e);
+    });
+    stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) moveStick(e); });
+    stick.addEventListener('pointerup', endStick);
+    stick.addEventListener('pointercancel', endStick);
+
+    // Buttons act the moment they are touched
+    function press(el, fn) {
+        el.addEventListener('pointerdown', (e) => { e.preventDefault(); if (joined) fn(); });
+    }
+    press(document.getElementById('tJump'), startJump);
+    document.querySelectorAll('#actions [data-emote]').forEach((b) => press(b, () => startEmote(b.dataset.emote)));
+
+    // Opening the keyboard has to happen on a tap (click), not on touch-down
+    document.getElementById('tChat').addEventListener('click', () => chatInput.focus());
+    chatInput.placeholder = 'Tap here to chat';
+    chatInput.addEventListener('blur', () => setTimeout(layout, 150));
+
+    document.getElementById('touch').addEventListener('contextmenu', (e) => e.preventDefault());
+})();
 
 setRoomBackground(currentRoomId);
 updateAudioForRoom();
